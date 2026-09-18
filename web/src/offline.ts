@@ -1,3 +1,4 @@
+import { API_BASE } from './api';
 import { getOfflineUser } from './offlineSession';
 import {
   deleteOfflinePhoto,
@@ -125,7 +126,7 @@ export async function syncOfflineOperations(): Promise<SyncResult> {
 
         const photoResponse =
           await fetch(
-            '/api/photos',
+            API_BASE + '/api/photos',
             {
               method: 'POST',
               credentials:
@@ -161,7 +162,7 @@ export async function syncOfflineOperations(): Promise<SyncResult> {
       }
 
       const response = await fetch(
-        '/api' + operation.path,
+        API_BASE + '/api' + operation.path,
         {
           method:
             operation.method,

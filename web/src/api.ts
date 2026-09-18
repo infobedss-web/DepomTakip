@@ -8,8 +8,10 @@ export class ApiError extends Error {
     );
   }
 }
+export const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export async function api<T = any>(path: string, method = 'GET', body?: unknown): Promise<T> {
-  const r = await fetch('/api' + path, {
+  const r = await fetch(API_BASE + '/api' + path, {
     method,
     credentials: 'include',
     headers: body instanceof FormData ? {} : { 'Content-Type': 'application/json' },

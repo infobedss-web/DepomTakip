@@ -1,3 +1,4 @@
+import { API_BASE } from './api';
 import { useEffect, useMemo, useState } from 'react';
 
 type Source = {
@@ -45,7 +46,7 @@ async function request<T>(
   url: string,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(`/api${url}`, {
+  const response = await fetch(`${API_BASE}/api${url}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
