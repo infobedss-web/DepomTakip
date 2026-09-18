@@ -1,7 +1,7 @@
 import { operations } from './operations.js';
 import { licensing, requireActiveLicense } from './licensing.js';
 import express from 'express';
-import helmet from 'helmet';
+import helmetModule from 'helmet';
 import cookieParser from 'cookie-parser';
 import { z } from 'zod';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +14,8 @@ import { counting } from './counting.js';
 import { manage } from './management.js';
 import { mobilePairing } from './mobile-pairing.js';
 import { mobileDevices } from './mobile-devices.js';
+const helmet = helmetModule as unknown as (options?: any) => express.RequestHandler;
+
 export const app = express();
 app.disable('x-powered-by');
 app.use(
