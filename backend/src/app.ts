@@ -140,6 +140,4 @@ app.use((error: any, _req: express.Request, res: express.Response, _next: expres
   });
 });
 
-
-
-
+export default app;
