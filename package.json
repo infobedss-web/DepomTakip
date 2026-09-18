@@ -1,0 +1,87 @@
+{
+  "name": "bedss",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "backend",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev -w backend\" \"npm run dev -w web\"",
+    "build": "npm run build -w backend && npm run build -w web",
+    "start": "npm run start -w backend",
+    "db:migrate": "npm run db:migrate -w backend",
+    "db:seed": "npm run db:seed -w backend",
+    "test": "npm run test -w backend",
+    "test:e2e": "playwright test",
+    "format": "prettier --write \"backend/src/**/*.ts\" \"backend/test/**/*.ts\" \"web/src/**/*.{ts,tsx,css}\" \"web/e2e/*.ts\" \"*.{json,ts,yml}\" \"**/tsconfig.json\"",
+    "format:check": "prettier --check \"backend/src/**/*.ts\" \"backend/test/**/*.ts\" \"web/src/**/*.{ts,tsx,css}\"",
+    "electron:dev": "electron .",
+    "electron:build": "npm run build && electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "concurrently": "^9.2.0",
+    "electron": "^44.2.0",
+    "electron-builder": "^26.15.3",
+    "prettier": "^3.9.6"
+  },
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "com.bedss.desktop",
+    "productName": "BEDSS",
+    "artifactName": "BEDSS Setup.${ext}",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "backend/dist",
+        "to": "bedss/api/dist"
+      },
+      {
+        "from": "web/dist",
+        "to": "bedss/web/dist"
+      },
+      {
+        "from": "database",
+        "to": "bedss/database"
+      },
+      {
+        "from": "electron-runtime/node_modules",
+        "to": "bedss/node_modules"
+      },
+      {
+        "from": "electron-runtime/runtime",
+        "to": "bedss/runtime"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "BEDSS",
+      "perMachine": false
+    }
+  },
+  "dependencies": {
+    "react-native-safe-area-context": "^5.9.1",
+    "react-native-screens": "^4.27.0"
+  }
+}

@@ -1,0 +1,13 @@
+services:
+  database:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: bedss
+      POSTGRES_PASSWORD: bedss_local
+      POSTGRES_DB: bedss
+    ports:
+      - '127.0.0.1:55432:5432'
+    volumes:
+      - bedss_data:/var/lib/postgresql/data
+volumes:
+  bedss_data:

@@ -1,0 +1,16 @@
+node_modules
+.git
+backups
+*.log
+*.bak
+*.bak-*
+.vscode
+.idea
+coverage
+test-results
+playwright-report
+electron-runtime
+dist
+backend/dist
+web/dist
+mobile
