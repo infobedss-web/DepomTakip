@@ -36,3 +36,4 @@ CHECK (
     role IN ('SUPER_ADMIN','AUDITOR')
     OR business_id IS NOT NULL
 );
+INSERT INTO schema_versions(version) VALUES(27) ON CONFLICT (version) DO NOTHING;

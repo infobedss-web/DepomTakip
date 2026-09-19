@@ -41,3 +41,5 @@ ALTER TABLE businesses
 
 ALTER TABLE warehouses
     ALTER COLUMN code SET NOT NULL;
+
+INSERT INTO schema_versions(version) VALUES(21) ON CONFLICT (version) DO NOTHING;
