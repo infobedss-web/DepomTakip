@@ -24,9 +24,11 @@ app.use(
 app.use(express.json({ limit: '8mb' }));
 app.use(cookieParser());
 app.use((req, res, next) => {
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && req.headers.origin) {
-    const origin = new URL(req.headers.origin);
-    const allowed = process.env.APP_ORIGIN;
+  const requestOrigin = req.headers.origin;
+  const allowed = process.env.APP_ORIGIN;
+
+  if (requestOrigin) {
+    const origin = new URL(requestOrigin);
     const sameHost = origin.host === req.headers.host;
     const localDevelopment =
       process.env.NODE_ENV !== 'production' &&
@@ -34,13 +36,25 @@ app.use((req, res, next) => {
 
     const configuredAllowed =
       Boolean(allowed) &&
-      req.headers.origin === allowed;
+      requestOrigin === allowed;
 
-    if (!sameHost && !localDevelopment && !configuredAllowed) {
+    if (sameHost || localDevelopment || configuredAllowed) {
+      res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.setHeader('Vary', 'Origin');
+    } else {
       res.status(403).json({ error: 'Geçersiz istek kaynağı.' });
       return;
     }
   }
+
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204);
+    return;
+  }
+
   next();
 });
 app.get('/api/health', async (_req, res) => {
