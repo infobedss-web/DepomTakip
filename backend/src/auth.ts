@@ -119,7 +119,7 @@ auth.post('/auth/login', async (req, res) => {
   });
   res.cookie('bedss_session', sid, {
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     secure: process.env.NODE_ENV === 'production',
     maxAge: 43200000,
     path: '/',
@@ -141,7 +141,7 @@ auth.get('/auth/me', authenticate, (req, res) =>
 auth.post('/auth/logout', async (req, res) => {
   if (req.cookies.bedss_session)
     await pool.query('DELETE FROM sessions WHERE token_hash=$1', [hash(req.cookies.bedss_session)]);
-  res.clearCookie('bedss_session', { path: '/' });
+  res.clearCookie('bedss_session', { path: '/', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict', secure: process.env.NODE_ENV === 'production' });
   res.json({ ok: true });
 });
 auth.post('/invitations', authenticate, requirePermission('kullanici_yonet'), async (req, res) => {
