@@ -387,15 +387,23 @@ auth.post('/auth/complete', upload.none(), async (req, res) => {
   const b = z
     .object({
       token: z.string().length(64),
-      password: z.string().min(12).max(72).regex(/[A-Z]/).regex(/[a-z]/).regex(/[0-9]/),
+      login_code: z.string().optional(),
+      pin: z.string().optional(),
+      password: z.string().optional(),
     })
     .parse(req.body);
 
-  const pw = await bcrypt.hash(b.password, 12);
-
   await transaction(async (db) => {
     const r = await db.query(
-      'SELECT * FROM invitations WHERE token_hash=$1 FOR UPDATE',
+      `
+        SELECT
+          i.*,
+          u.role
+        FROM invitations i
+        JOIN users u ON u.id = i.user_id
+        WHERE i.token_hash=$1
+        FOR UPDATE OF i
+      `,
       [hash(b.token)],
     );
 
@@ -404,13 +412,71 @@ auth.post('/auth/complete', upload.none(), async (req, res) => {
     assert(
       i && i.verified_at && !i.consumed_at && new Date(i.expires_at) > new Date(),
       400,
-      'Davet geçersiz veya süresi dolmuş.',
+      'Davet gecersiz veya suresi dolmus.',
     );
 
-    await db.query(
-      "UPDATE users SET password_hash=$1,status='ACTIVE' WHERE id=$2",
-      [pw, i.user_id],
-    );
+    const pinRole =
+      i.role === 'FIRM_ADMIN' ||
+      i.role === 'WAREHOUSE_STAFF';
+
+    if (pinRole) {
+      assert(
+        !!b.login_code && /^\d{6}$/.test(b.login_code),
+        400,
+        'Kullanici/Personel numarasi tam 6 haneli olmalidir.',
+      );
+
+      assert(
+        !!b.pin && /^\d{6}$/.test(b.pin),
+        400,
+        'PIN tam 6 haneli olmalidir.',
+      );
+
+      const pw = await bcrypt.hash(b.pin, 12);
+
+      try {
+        await db.query(
+          `
+            UPDATE users
+            SET
+              login_code=$1,
+              password_hash=$2,
+              status='ACTIVE'
+            WHERE id=$3
+          `,
+          [b.login_code, pw, i.user_id],
+        );
+      } catch (e: any) {
+        if (e?.code === '23505') {
+          assert(false, 409, 'Bu 6 haneli kullanici/personel numarasi bu firmada zaten kullaniliyor.');
+        }
+        throw e;
+      }
+    } else {
+      assert(
+        !!b.password &&
+          b.password.length >= 12 &&
+          b.password.length <= 72 &&
+          /[A-Z]/.test(b.password) &&
+          /[a-z]/.test(b.password) &&
+          /[0-9]/.test(b.password),
+        400,
+        'Sifre en az 12 karakter olmali; buyuk harf, kucuk harf ve rakam icermelidir.',
+      );
+
+      const pw = await bcrypt.hash(b.password, 12);
+
+      await db.query(
+        `
+          UPDATE users
+          SET
+            password_hash=$1,
+            status='ACTIVE'
+          WHERE id=$2
+        `,
+        [pw, i.user_id],
+      );
+    }
 
     await db.query(
       'UPDATE invitations SET consumed_at=now() WHERE id=$1',
@@ -420,10 +486,9 @@ auth.post('/auth/complete', upload.none(), async (req, res) => {
 
   res.json({
     ok: true,
-    message: 'Kullanıcı hesabı aktif edildi.',
+    message: 'Kullanici hesabi aktif edildi.',
   });
 });
-
 function validFile(f: Express.Multer.File) {
   return (
     (f.mimetype === 'application/pdf' &&

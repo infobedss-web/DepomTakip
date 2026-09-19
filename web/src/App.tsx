@@ -452,8 +452,12 @@ function DemoReset() {
 }
 
 function Login({ onLogin }: { onLogin: (u: Row) => void }) {
-  const [error, setError] = useState(''),
-    [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [loginType, setLoginType] = useState<'admin' | 'firm' | 'staff'>('admin');
+
+  const pinLogin = loginType === 'firm' || loginType === 'staff';
+
   return (
     <div className="login-page">
       <section className="login-story">
@@ -461,8 +465,9 @@ function Login({ onLogin }: { onLogin: (u: Row) => void }) {
           <span className="brand-icon">
             <Boxes />
           </span>
-          BEDSS
+          DepomTakip
         </div>
+
         <div>
           <span className="eyebrow">DEPO VE SAYIM YÖNETİMİ</span>
           <h1>
@@ -470,13 +475,19 @@ function Login({ onLogin }: { onLogin: (u: Row) => void }) {
             <br />
             Her sayımın izi.
           </h1>
-          <p>Depolarınızı, stoklarınızı ve saha ekibinizi tek bir çalışma alanından yönetin.</p>
+
+          <p>
+            Depolarınızı, stoklarınızı ve saha ekibinizi tek bir çalışma
+            alanından yönetin.
+          </p>
+
           <div className="story-grid">
             <div>
               <Warehouse />
               <strong>Düzenli depolar</strong>
               <small>Lokasyondan hücreye tam görünürlük</small>
             </div>
+
             <div>
               <ScanLine />
               <strong>Güvenilir sayım</strong>
@@ -484,21 +495,80 @@ function Login({ onLogin }: { onLogin: (u: Row) => void }) {
             </div>
           </div>
         </div>
-        <small>BEDSS · Yeni ve bağımsız bir başlangıç</small>
+
+        <small>DepomTakip · Online ve offline depo yönetimi</small>
       </section>
+
       <section className="login-form">
         <div className="login-card">
           <span className="eyebrow">ÇALIŞMA ALANINIZA HOŞ GELDİNİZ</span>
-          <h2>Hesabınıza giriş yapın</h2>
-          <p className="muted">Devam etmek için e-posta adresinizi ve şifrenizi girin.</p>
+          <h2>Giriş yapın</h2>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 8,
+              marginBottom: 20,
+            }}
+          >
+            <button
+              type="button"
+              className={loginType === 'admin' ? 'primary' : 'secondary'}
+              onClick={() => {
+                setLoginType('admin');
+                setError('');
+              }}
+            >
+              Yönetici
+            </button>
+
+            <button
+              type="button"
+              className={loginType === 'firm' ? 'primary' : 'secondary'}
+              onClick={() => {
+                setLoginType('firm');
+                setError('');
+              }}
+            >
+              Firma
+            </button>
+
+            <button
+              type="button"
+              className={loginType === 'staff' ? 'primary' : 'secondary'}
+              onClick={() => {
+                setLoginType('staff');
+                setError('');
+              }}
+            >
+              Personel
+            </button>
+          </div>
+
+          <p className="muted">
+            {loginType === 'admin'
+              ? 'Sistem yöneticisi e-posta adresi ve şifresiyle giriş yapar.'
+              : loginType === 'firm'
+                ? 'Firma kodu, 6 haneli kullanıcı numarası ve PIN girin.'
+                : 'Firma kodu, 6 haneli personel numarası ve PIN girin.'}
+          </p>
+
           <form
             onSubmit={async (e) => {
               e.preventDefault();
               setBusy(true);
               setError('');
+
               const b = Object.fromEntries(new FormData(e.currentTarget));
+
               try {
-                const result = await api('/auth/login', 'POST', b);
+                const result = await api(
+                  pinLogin ? '/auth/pin-login' : '/auth/login',
+                  'POST',
+                  b,
+                );
+
                 const loggedInUser = result.user;
 
                 if (loggedInUser.role !== 'SUPER_ADMIN') {
@@ -513,77 +583,135 @@ function Login({ onLogin }: { onLogin: (u: Row) => void }) {
               }
             }}
           >
-            <label>
-              E-posta adresi
-              <input
-                type="email"
-                name="email"
-                autoComplete="username"
-                placeholder="ad@isletme.com"
-                required
-              />
-            </label>
-            <label>
-              Şifre
-              <input
-                type="password"
-                name="password"
-                autoComplete="current-password"
-                required
-                minLength={1}
-              />
-            </label>
+            {loginType === 'admin' ? (
+              <>
+                <label>
+                  E-posta adresi
+                  <input
+                    type="email"
+                    name="email"
+                    autoComplete="username"
+                    placeholder="admin@depomtakip.com"
+                    required
+                  />
+                </label>
 
-            <label>
-              Lisans Anahtarı
-              <input
-                type="text"
-                name="license_key"
-                autoComplete="off"
-                placeholder="BEDSS-TRIAL-XXXX-XXXX-XXXX-XXXX"
-              />
-              <small>
-                Yalnızca ilk firma yöneticisi girişinde girilir.
-                Daha önce etkinleştirdiyseniz boş bırakın.
-              </small>
-            </label>
+                <label>
+                  Şifre
+                  <input
+                    type="password"
+                    name="password"
+                    autoComplete="current-password"
+                    required
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <label>
+                  Firma Kodu
+                  <input
+                    type="text"
+                    name="business_code"
+                    autoComplete="off"
+                    required
+                  />
+                </label>
+
+                <label>
+                  {loginType === 'firm'
+                    ? '6 Haneli Kullanıcı Numarası'
+                    : '6 Haneli Personel Numarası'}
+
+                  <input
+                    type="text"
+                    name="login_code"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    minLength={6}
+                    maxLength={6}
+                    autoComplete="username"
+                    placeholder="123456"
+                    required
+                  />
+                </label>
+
+                <label>
+                  6 Haneli PIN
+                  <input
+                    type="password"
+                    name="pin"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    minLength={6}
+                    maxLength={6}
+                    autoComplete="current-password"
+                    placeholder="••••••"
+                    required
+                  />
+                </label>
+
+                {loginType === 'firm' && (
+                  <label>
+                    Lisans Anahtarı
+                    <input
+                      type="text"
+                      name="license_key"
+                      autoComplete="off"
+                      placeholder="Yalnızca ilk girişte"
+                    />
+                    <small>
+                      Firma yetkilisinin yalnızca ilk girişinde gereklidir.
+                    </small>
+                  </label>
+                )}
+              </>
+            )}
+
             {error && (
               <div className="alert error" role="alert">
                 {error}
               </div>
             )}
+
             <button className="primary wide" disabled={busy}>
               {busy ? 'Giriş yapılıyor…' : 'Giriş Yap'}
               <ArrowUpRight size={18} />
             </button>
           </form>
-          <div className="demo-note">
-            <strong>Yerel demo</strong>
-            <p>
-              bayi@bedss.local · sayim@bedss.local
-              <br />
-              Şifre: <code>BedssDemo!2026</code>
-            </p>
-          </div>
         </div>
       </section>
     </div>
   );
 }
+
 function Onboarding({ token }: { token: string }) {
-  const [step, setStep] = useState(1),
-    [error, setError] = useState('');
+  const [step, setStep] = useState(1);
+  const [error, setError] = useState('');
+
   return (
     <div className="onboarding">
       <div className="card">
-        <h1>BEDSS’e katılın</h1>
-        <p className="muted">Davet → OTP doğrulama → Hesap oluşturma</p>
+        <h1>DepomTakip'e katılın</h1>
+        <p className="muted">
+          Davet → OTP doğrulama → Hesap oluşturma
+        </p>
+
         {step === 1 ? (
           <DataForm
             submit="Kodu Doğrula"
-            fields={[{ name: 'otp', label: '6 haneli doğrulama kodu' }]}
+            fields={[
+              {
+                name: 'otp',
+                label: '6 haneli doğrulama kodu',
+              },
+            ]}
             onSubmit={async (b) => {
-              await api('/auth/verify', 'POST', { token, ...b });
+              await api('/auth/verify', 'POST', {
+                token,
+                ...b,
+              });
+
               setStep(2);
             }}
           />
@@ -592,8 +720,10 @@ function Onboarding({ token }: { token: string }) {
             onSubmit={async (e) => {
               e.preventDefault();
               setError('');
+
               const b = new FormData(e.currentTarget);
               b.set('token', token);
+
               try {
                 await api('/auth/complete', 'POST', b);
                 setStep(3);
@@ -603,19 +733,45 @@ function Onboarding({ token }: { token: string }) {
             }}
           >
             <label>
-              Şifre (en az 12 karakter, büyük/küçük harf ve rakam)
-              <input name="password" type="password" minLength={12} maxLength={72} required />
+              6 Haneli Kullanıcı / Personel Numarası
+              <input
+                name="login_code"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]{6}"
+                minLength={6}
+                maxLength={6}
+                placeholder="123456"
+                required
+              />
             </label>
-            
+
+            <label>
+              6 Haneli PIN
+              <input
+                name="pin"
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]{6}"
+                minLength={6}
+                maxLength={6}
+                placeholder="••••••"
+                required
+              />
+            </label>
+
             {error && <div className="alert error">{error}</div>}
-        
-<button className="primary">Hesabı Tamamla</button>
+
+            <button className="primary">
+              Hesabı Tamamla
+            </button>
           </form>
         ) : (
           <>
             <div className="alert">
               Hesabınız oluşturuldu. Giriş yapabilirsiniz.
             </div>
+
             <a href="/">Giriş ekranına dön</a>
           </>
         )}
