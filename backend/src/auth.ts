@@ -135,6 +135,123 @@ auth.post('/auth/login', async (req, res) => {
     },
   });
 });
+auth.post('/auth/pin-login', async (req, res) => {
+  const b = z
+    .object({
+      business_code: z.string().trim().min(1).max(50),
+      login_code: z.string().regex(/^\d{6}$/, 'Kullanici/Personel numarasi 6 haneli olmalidir.'),
+      pin: z.string().regex(/^\d{6}$/, 'PIN 6 haneli olmalidir.'),
+      license_key: z.string().trim().max(100).optional(),
+    })
+    .parse(req.body);
+
+  const result = await pool.query(
+    `
+      SELECT
+        u.*,
+        b.code AS business_code,
+        b.status AS business_status
+      FROM users u
+      JOIN businesses b ON b.id = u.business_id
+      WHERE upper(b.code) = upper($1)
+        AND u.login_code = $2
+        AND u.role IN ('FIRM_ADMIN', 'WAREHOUSE_STAFF')
+      LIMIT 1
+    `,
+    [b.business_code, b.login_code],
+  );
+
+  const u = result.rows[0];
+
+  const valid = await bcrypt.compare(
+    b.pin,
+    u?.password_hash ||
+      '$2b$12$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  );
+
+  assert(
+    u && valid && u.status === 'ACTIVE',
+    401,
+    'Firma kodu, kullanici numarasi veya PIN hatali.',
+  );
+
+  assert(
+    u.business_status === 'ACTIVE',
+    403,
+    'Firma hesabi aktif degil.',
+  );
+
+  const licenseResult = await pool.query(
+    `
+      SELECT license_key, status, starts_at, ends_at
+      FROM business_licenses
+      WHERE business_id=$1
+      LIMIT 1
+    `,
+    [u.business_id],
+  );
+
+  const firmLicense = licenseResult.rows[0];
+
+  assert(
+    firmLicense &&
+      firmLicense.status === 'ACTIVE' &&
+      new Date(firmLicense.starts_at) <= new Date() &&
+      new Date(firmLicense.ends_at) > new Date(),
+    403,
+    'Firma lisansi aktif degil veya suresi dolmus.',
+  );
+
+  if (u.role === 'FIRM_ADMIN' && !u.license_activated_at) {
+    assert(
+      !!b.license_key,
+      403,
+      'Ilk giris icin lisans anahtarini giriniz.',
+    );
+
+    assert(
+      String(firmLicense.license_key || '').trim().toUpperCase() ===
+        String(b.license_key || '').trim().toUpperCase(),
+      403,
+      'Lisans anahtari hatali.',
+    );
+
+    await pool.query(
+      'UPDATE users SET license_activated_at=now() WHERE id=$1',
+      [u.id],
+    );
+  }
+
+  const sid = token();
+
+  await transaction(async (db) => {
+    await db.query(
+      "INSERT INTO sessions VALUES($1,$2,now()+interval '12 hours')",
+      [hash(sid), u.id],
+    );
+
+    await audit(db, u, 'LOGIN', 'user', u.id);
+  });
+
+  res.cookie('bedss_session', sid, {
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 43200000,
+    path: '/',
+  });
+
+  res.json({
+    user: {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      business_id: u.business_id,
+      permissions: effective(u),
+    },
+  });
+});
 auth.get('/auth/me', authenticate, (req, res) =>
   res.json({ user: { ...req.user, permissions: effective(req.user) } }),
 );
