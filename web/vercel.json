@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://depom-takip-backendd.vercel.app/api/:path*"
+    }
+  ]
+}
