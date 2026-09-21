@@ -24,11 +24,13 @@ import {
 } from './offline';
 import {
   getPendingOfflineCount,
+  hasPendingOfflineCountForStock,
   saveOfflinePhoto,
 } from './offlineDb';
 import {
   clearActiveCountState,
   getActiveCountState,
+  getOfflineUser,
   saveActiveCountState,
 } from './offlineSession';
 export function Counting({ user, logout }: { user: Row; logout: () => Promise<void> }) {
@@ -391,6 +393,29 @@ export function Counting({ user, logout }: { user: Row; logout: () => Promise<vo
               extra.location_code,
           },
         );
+
+      const offlineUser = await getOfflineUser();
+
+      if (!offlineUser?.id) {
+        throw new Error('Çevrimdışı kullanıcı oturumu bulunamadı.');
+      }
+
+      const alreadyQueued =
+        await hasPendingOfflineCountForStock(
+          room!.id,
+          p.stock_id,
+          {
+            user_id: String(offlineUser.id),
+            business_id:
+              (offlineUser.business_id as string | null) ?? null,
+          },
+        );
+
+      if (alreadyQueued) {
+        throw new Error(
+          'Bu ürün için cihazda bekleyen bir sayım zaten var. İnternet bağlantısı geldiğinde önce mevcut kayıt senkronize edilecek.',
+        );
+      }
 
       setProduct({
         ...p,

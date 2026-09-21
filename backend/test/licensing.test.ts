@@ -99,7 +99,7 @@ test(
 
     assert.equal(
       license.plan_code,
-      'PILOT',
+      'TRIAL',
     );
 
     assert.equal(
@@ -204,7 +204,7 @@ test(
       )
       .send({
         plan_code:
-          'PILOT',
+          'TRIAL',
 
         status:
           'SUSPENDED',
@@ -252,7 +252,7 @@ test(
       )
       .send({
         plan_code:
-          'PILOT',
+          'TRIAL',
 
         status:
           'ACTIVE',

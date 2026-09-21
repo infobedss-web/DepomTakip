@@ -807,11 +807,45 @@ counting.post(
           },
         );
 
-        return {
+        const response = {
           ok: true,
           entry_id: result.id,
           stock_id: stock.id,
         };
+
+        /*
+         * Offline count + idempotency result must commit atomically.
+         *
+         * If the server commits the count but the device loses the HTTP
+         * response, a retry with the same X-Client-Operation-Id must replay
+         * this exact successful response instead of attempting a second count.
+         */
+        const clientOperationId =
+          req.header('X-Client-Operation-Id');
+
+        if (clientOperationId) {
+          await db.query(
+            `
+            UPDATE client_operations
+            SET
+              status='DONE',
+              response_status=201,
+              response_body=$3::jsonb,
+              error_message=NULL,
+              updated_at=now()
+            WHERE user_id=$1
+              AND client_operation_id=$2
+              AND status='PROCESSING'
+            `,
+            [
+              req.user.id,
+              clientOperationId,
+              JSON.stringify(response),
+            ],
+          );
+        }
+
+        return response;
       }),
     );
   },

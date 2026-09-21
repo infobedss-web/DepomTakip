@@ -159,6 +159,19 @@ export async function syncOfflineOperations(): Promise<SyncResult> {
         };
 
         delete requestBody.offline_photo_id;
+
+        // Fotoğraf sunucuya ulaştıktan sonra oluşan photo_id'yi
+        // sayım isteğini göndermeden ÖNCE cihazdaki operasyona kaydet.
+        // Böylece bağlantı sayım cevabı gelmeden koparsa retry:
+        // - fotoğrafı yeniden yüklemez,
+        // - aynı photo_id'yi kullanır,
+        // - aynı request body + aynı operation id ile devam eder.
+        await updateOfflineOperation(
+          operation.client_operation_id,
+          {
+            body: requestBody,
+          },
+        );
       }
 
       const response = await fetch(

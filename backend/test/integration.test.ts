@@ -58,13 +58,37 @@ before(async () => {
     ['GUEST', guest, 'guest'],
   ] as const) {
     const email = name + suffix + '@test.local';
+    const isCounter = role === 'COUNTER';
+    const loginCode =
+      name === 'counter' ? '200001' :
+      name === 'counter2' ? '200002' :
+      null;
+    const userPin = '123456';
+    const userHash = isCounter ? await bcrypt.hash(userPin, 4) : pw;
+
     const r = await pool.query(
-      "INSERT INTO users(business_id,name,email,password_hash,role,status) VALUES($1,$2,$3,$4,$5,'ACTIVE') RETURNING id",
-      [business, name, email, pw, role],
+      "INSERT INTO users(business_id,name,email,password_hash,login_code,role,status) VALUES($1,$2,$3,$4,$5,$6,'ACTIVE') RETURNING id",
+      [business, name, email, userHash, loginCode, role],
     );
+
     if (name === 'counter') uid = r.rows[0].id;
     if (name === 'counter2') uid2 = r.rows[0].id;
-    await agent.post('/api/auth/login').send({ email, password }).expect(200);
+
+    if (isCounter) {
+      await agent
+        .post('/api/auth/pin-login')
+        .send({
+          business_code: 'INT-' + suffix,
+          login_code: loginCode,
+          pin: userPin,
+        })
+        .expect(200);
+    } else {
+      await agent
+        .post('/api/auth/login')
+        .send({ email, password })
+        .expect(200);
+    }
   }
 });
 after(async () => {
@@ -273,6 +297,278 @@ test('Room assignment, opening, joining and explicit owner approval', async () =
     .send({ physical: 40, reason: 'Active count test' })
     .expect(409);
 });
+test('OFFLINE IDEMPOTENCY CRITICAL TEST', async () => {
+  const offlineProduct = (
+    await owner
+      .post('/api/products')
+      .send({
+        business_id: business,
+        sku: 'OFF-' + suffix,
+        barcode: 'OFFBAR-' + suffix,
+        name: 'Offline Test Product',
+        purchase_price: 10,
+        box_size: 1,
+      })
+      .expect(201)
+  ).body.id;
+
+  const offlineStock = (
+    await stockFixture(pool, {
+      product_id: offlineProduct,
+      location_id: location,
+      physical: 100,
+    })
+  ).id;
+
+  /*
+   * Ana integration fixture zaten acik ve onaylanmis bir sayim odasi
+   * hazirladi. Ayni lokasyonda ikinci oda acmak sistem tarafindan hakli
+   * olarak engelleniyor. Offline testi mevcut acik room ile yapiyoruz.
+   */
+
+  const offlineRoom = room;
+
+  // Offline snapshot stok miktarini sayaciya sizdirmamali.
+  const snapshot =
+    (await counter
+      .get('/api/count/offline-snapshot/' + offlineRoom)
+      .expect(200)).body;
+
+  const snapshotText = JSON.stringify(snapshot);
+
+  for (const forbidden of [
+    '"physical"',
+    '"expected"',
+    '"reserved"',
+    '"difference"',
+    '"purchase_price"',
+    '"sale_price"',
+    '"unit_cost"',
+  ]) {
+    assert.equal(snapshotText.includes(forbidden), false);
+  }
+
+  // offlineStock oda acildiktan sonra olusturuldugu icin test fixture'inda
+  // room_items listesine kontrollu olarak ekliyoruz.
+  await pool.query(
+    `
+    INSERT INTO room_items(room_id, stock_id, expected, unit_cost)
+    VALUES($1,$2,100,10)
+    ON CONFLICT DO NOTHING
+    `,
+    [offlineRoom, offlineStock],
+  );
+
+  const refreshedSnapshot =
+    (await counter
+      .get('/api/count/offline-snapshot/' + offlineRoom)
+      .expect(200)).body;
+
+  assert.ok(
+    refreshedSnapshot.products.some(
+      (item: any) => item.stock_id === offlineStock,
+    ),
+  );
+
+  const offlineCountStock = offlineStock;
+  const operationId = randomUUID();
+
+  const payload = {
+    room_id: offlineRoom,
+    stock_id: offlineCountStock,
+    quantity: 97,
+    unit: 'Adet',
+    condition: 'NORMAL',
+    note: 'offline critical test',
+    device_created_at: new Date().toISOString(),
+  };
+
+  // Ilk senkronizasyon.
+  const first = await counter
+    .post('/api/count/offline-submit')
+    .set('X-Client-Operation-Id', operationId)
+    .send(payload)
+    .expect(201);
+
+  assert.equal(first.body.ok, true);
+
+  // Sunucu cevabi telefona ulasmamis gibi ayni paket tekrar gonderiliyor.
+  const retry = await counter
+    .post('/api/count/offline-submit')
+    .set('X-Client-Operation-Id', operationId)
+    .send(payload)
+    .expect(201);
+
+  assert.equal(retry.body.entry_id, first.body.entry_id);
+
+  // Veritabaninda kesinlikle tek sayim olmali.
+  const entries = await pool.query(
+    `
+    SELECT id, quantity
+    FROM count_entries
+    WHERE room_id=$1 AND stock_id=$2
+    `,
+    [offlineRoom, offlineCountStock],
+  );
+
+  assert.equal(entries.rowCount, 1);
+  assert.equal(Number(entries.rows[0].quantity), 97);
+
+  // Operation transaction bittiginde DONE olmali.
+  const operation = (
+    await pool.query(
+      `
+      SELECT status,response_status,response_body
+      FROM client_operations
+      WHERE user_id=$1 AND client_operation_id=$2
+      `,
+      [uid, operationId],
+    )
+  ).rows[0];
+
+  assert.equal(operation.status, 'DONE');
+  assert.equal(Number(operation.response_status), 201);
+  assert.equal(
+    operation.response_body.entry_id,
+    first.body.entry_id,
+  );
+
+  // Ayni ID ile miktari degistirme saldirisi reddedilmeli.
+  await counter
+    .post('/api/count/offline-submit')
+    .set('X-Client-Operation-Id', operationId)
+    .send({ ...payload, quantity: 98 })
+    .expect(409);
+
+  const finalEntries = await pool.query(
+    `
+    SELECT quantity
+    FROM count_entries
+    WHERE room_id=$1 AND stock_id=$2
+    `,
+    [offlineRoom, offlineCountStock],
+  );
+
+  assert.equal(finalEntries.rowCount, 1);
+  assert.equal(Number(finalEntries.rows[0].quantity), 97);
+
+  // Bu test mevcut acik room'u kullandigi icin sonraki integration
+  // senaryolarina veri birakmamali. Sadece bu testin olusturdugu
+  // kayitlari temizliyoruz.
+  await pool.query(
+    `DELETE FROM count_entries
+     WHERE room_id=$1 AND stock_id=$2`,
+    [offlineRoom, offlineCountStock],
+  );
+
+  await pool.query(
+    `DELETE FROM room_items
+     WHERE room_id=$1 AND stock_id=$2`,
+    [offlineRoom, offlineCountStock],
+  );
+
+  await pool.query(
+    `DELETE FROM client_operations
+     WHERE user_id=$1 AND client_operation_id=$2`,
+    [uid, operationId],
+  );
+});
+test('OFFLINE TWO DEVICE CONFLICT CRITICAL TEST', async () => {
+  const conflictProduct = (
+    await owner
+      .post('/api/products')
+      .send({
+        business_id: business,
+        sku: 'OFF-CONFLICT-' + suffix,
+        barcode: 'OFF-CONFLICT-BAR-' + suffix,
+        name: 'Offline Conflict Product',
+        purchase_price: 10,
+        box_size: 1,
+      })
+      .expect(201)
+  ).body.id;
+
+  const conflictStock = (
+    await stockFixture(pool, {
+      product_id: conflictProduct,
+      location_id: location,
+      physical: 100,
+    })
+  ).id;
+
+  // Ana room acikken olusturuldugu icin test stokunu kontrollu
+  // olarak room_items listesine ekliyoruz.
+  await pool.query(
+    `
+    INSERT INTO room_items(room_id, stock_id, expected, unit_cost)
+    VALUES($1,$2,100,10)
+    `,
+    [room, conflictStock],
+  );
+
+  const operation1 = randomUUID();
+  const operation2 = randomUUID();
+
+  const payload = {
+    room_id: room,
+    stock_id: conflictStock,
+    quantity: 97,
+    unit: 'Adet',
+    condition: 'NORMAL',
+    note: 'two device offline conflict',
+    device_created_at: new Date().toISOString(),
+  };
+
+  // Iki farkli kullanici/cihaz ayni stogu ayni anda senkronize ediyor.
+  const responses = await Promise.all([
+    counter
+      .post('/api/count/offline-submit')
+      .set('X-Client-Operation-Id', operation1)
+      .send(payload),
+
+    counter2
+      .post('/api/count/offline-submit')
+      .set('X-Client-Operation-Id', operation2)
+      .send(payload),
+  ]);
+
+  assert.deepEqual(
+    responses.map((r) => r.status).sort(),
+    [201, 409],
+  );
+
+  // DB'de ayni room+stock icin kesinlikle tek sayim olmali.
+  const entries = await pool.query(
+    `
+    SELECT id, user_id, quantity
+    FROM count_entries
+    WHERE room_id=$1 AND stock_id=$2
+    `,
+    [room, conflictStock],
+  );
+
+  assert.equal(entries.rowCount, 1);
+  assert.equal(Number(entries.rows[0].quantity), 97);
+
+  // Test verisini sonraki integration testlerinden izole et.
+  await pool.query(
+    `DELETE FROM count_entries
+     WHERE room_id=$1 AND stock_id=$2`,
+    [room, conflictStock],
+  );
+
+  await pool.query(
+    `DELETE FROM room_items
+     WHERE room_id=$1 AND stock_id=$2`,
+    [room, conflictStock],
+  );
+
+  await pool.query(
+    `DELETE FROM client_operations
+     WHERE client_operation_id = ANY($1::uuid[])`,
+    [[operation1, operation2]],
+  );
+});
 test('Concurrent product locking, blind projection, unit conversion, and duplicate protection', async () => {
   const responses = await Promise.all(
     [counter, counter2].map((c) =>
@@ -342,6 +638,70 @@ test('Concurrent product locking, blind projection, unit conversion, and duplica
 });
 test('Completion, difference report, correction, stock approval and immutable audit trail', async () => {
   await owner.post('/api/rooms/' + room + '/complete').expect(200);
+
+  // CRITICAL: Oda bu noktada gercekten COMPLETED.
+  const completedState = await pool.query(
+    `SELECT status FROM rooms WHERE id=$1`,
+    [room],
+  );
+  assert.equal(completedState.rows[0].status, 'COMPLETED');
+
+  // Daha once basariyla sayilmis stok icin yeni bir offline operation ID
+  // gonderiyoruz. Endpoint once oda durumunu kontrol etmeli ve kapali
+  // sayima hicbir yeni veri yazmamalidir.
+  const lateOperationId = randomUUID();
+
+  const beforeLateCount = await pool.query(
+    `
+    SELECT COUNT(*)::int AS total
+    FROM count_entries
+    WHERE room_id=$1
+    `,
+    [room],
+  );
+
+  const lateOfflineResponse = await counter
+    .post('/api/count/offline-submit')
+    .set('X-Client-Operation-Id', lateOperationId)
+    .send({
+      room_id: room,
+      stock_id: stock,
+      quantity: 999,
+      unit: 'Adet',
+      condition: 'NORMAL',
+      note: 'late offline packet after completed room',
+      device_created_at: new Date(Date.now() - 60000).toISOString(),
+    });
+
+  assert.equal(lateOfflineResponse.status, 409);
+
+  const afterLateCount = await pool.query(
+    `
+    SELECT COUNT(*)::int AS total
+    FROM count_entries
+    WHERE room_id=$1
+    `,
+    [room],
+  );
+
+  assert.equal(
+    afterLateCount.rows[0].total,
+    beforeLateCount.rows[0].total,
+  );
+
+  // Mevcut sayim de degismemis olmali.
+  const protectedEntry = await pool.query(
+    `
+    SELECT quantity
+    FROM count_entries
+    WHERE room_id=$1 AND stock_id=$2
+    `,
+    [room, stock],
+  );
+
+  assert.equal(protectedEntry.rowCount, 1);
+  assert.notEqual(Number(protectedEntry.rows[0].quantity), 999);
+
   let report = (await owner.get('/api/rooms/' + room + '/report').expect(200)).body;
   assert.equal(Number(report.rows[0].difference), -6);
   assert.equal(Number(report.rows[0].value_difference), -60);
@@ -386,10 +746,14 @@ test('Invitation OTP, document-free activation and replay prevention', async () 
   await request(app).post('/api/auth/verify').send({ token, otp: '000000' }).expect(400);
   await request(app).post('/api/auth/verify').send({ token, otp: i.otp }).expect(200);
   await request(app).post('/api/auth/verify').send({ token, otp: i.otp }).expect(400);
+  const counterLoginCode = '654321';
+  const counterPin = '123456';
+
   await request(app)
     .post('/api/auth/complete')
     .field('token', token!)
-    .field('password', password)
+    .field('login_code', counterLoginCode)
+    .field('pin', counterPin)
     .expect(200);
   await owner
     .post('/api/users/' + i.id + '/review')
@@ -400,7 +764,14 @@ test('Invitation OTP, document-free activation and replay prevention', async () 
     .send({ approve: true })
     .expect(409);
   const agent = request.agent(app);
-  await agent.post('/api/auth/login').send({ email, password }).expect(200);
+  await agent
+    .post('/api/auth/pin-login')
+    .send({
+      business_code: 'INT-' + suffix,
+      login_code: counterLoginCode,
+      pin: counterPin,
+    })
+    .expect(200);
   await agent.get('/api/stocks').expect(403);
   await request(app)
     .post('/api/auth/complete')
@@ -550,6 +921,148 @@ test('Rack descendants, cross-bin product locks, private photos, and rejection w
     .expect(200);
   const stocks = (await owner.get('/api/stocks')).body;
   for (const id of ids) assert.equal(Number(stocks.find((s: any) => s.id === id).physical), 10);
+});
+test('OFFLINE PENDING COUNT PREVENTS ROOM CLOSE CRITICAL TEST', async () => {
+  const lateZone = (
+    await owner
+      .post('/api/locations')
+      .send({
+        warehouse_id: warehouse,
+        name: 'Pending Offline Zone ' + suffix,
+        kind: 'ZONE',
+      })
+      .expect(201)
+  ).body.id;
+
+  const lateLocation = (
+    await owner
+      .post('/api/locations')
+      .send({
+        warehouse_id: warehouse,
+        parent_id: lateZone,
+        name: 'Pending Offline Rack ' + suffix,
+        kind: 'RACK',
+      })
+      .expect(201)
+  ).body.id;
+
+  const lateProduct = (
+    await owner
+      .post('/api/products')
+      .send({
+        business_id: business,
+        sku: 'PENDING-' + suffix,
+        barcode: 'PENDING-BAR-' + suffix,
+        name: 'Pending Offline Product',
+        purchase_price: 10,
+        box_size: 1,
+      })
+      .expect(201)
+  ).body.id;
+
+  const lateStock = (
+    await stockFixture(pool, {
+      product_id: lateProduct,
+      location_id: lateLocation,
+      physical: 100,
+    })
+  ).id;
+
+  const lateRoom = (
+    await owner
+      .post('/api/rooms')
+      .send({
+        warehouse_id: warehouse,
+        name: 'Pending Offline Room ' + suffix,
+        count_type: 'PARTIAL',
+        method: 'HYBRID',
+        starts_at: new Date(Date.now() - 60000).toISOString(),
+        ends_at: new Date(Date.now() + 86400000).toISOString(),
+        stock_ids: [lateStock],
+      })
+      .expect(201)
+  ).body;
+
+  await owner
+    .post('/api/rooms/' + lateRoom.id + '/assignments')
+    .send({ user_id: uid, location_id: lateLocation })
+    .expect(200);
+
+  await owner
+    .post('/api/rooms/' + lateRoom.id + '/open')
+    .expect(200);
+
+  await counter
+    .post('/api/count/join')
+    .send({ code: lateRoom.code })
+    .expect(200);
+
+  await owner
+    .post('/api/rooms/' + lateRoom.id + '/approve-person')
+    .send({ user_id: uid })
+    .expect(200);
+
+  await counter
+    .post('/api/count/agreement')
+    .send({ room_id: lateRoom.id, accepted: true })
+    .expect(200);
+
+  const locationCode = (
+    await owner
+      .get('/api/locations/' + lateLocation + '/qr')
+      .expect(200)
+  ).body.code;
+
+  await counter
+    .post('/api/count/location')
+    .send({ room_id: lateRoom.id, code: locationCode })
+    .expect(200);
+
+  // Cihaz sayim baslamadan once offline snapshot alabilmeli.
+  const snapshot = (
+    await counter
+      .get('/api/count/offline-snapshot/' + lateRoom.id)
+      .expect(200)
+  ).body;
+
+  assert.ok(
+    snapshot.products.some(
+      (item: any) => item.stock_id === lateStock,
+    ),
+  );
+
+  // Cihaz offline: 97 adet sayildi ancak henuz sunucuya ulasmadi.
+  // Personel kendi sayim oturumunu bitirse bile sunucuda count_entry yok.
+  await counter
+    .post('/api/count/finish')
+    .send({ room_id: lateRoom.id })
+    .expect(200);
+
+  // Yonetici eksik offline veri varken odayi kapatamamali.
+  const completeResponse = await owner
+    .post('/api/rooms/' + lateRoom.id + '/complete');
+
+  assert.equal(completeResponse.status, 409);
+
+  // Oda OPEN kalmali.
+  const roomState = await pool.query(
+    `SELECT status FROM rooms WHERE id=$1`,
+    [lateRoom.id],
+  );
+
+  assert.equal(roomState.rows[0].status, 'OPEN');
+
+  // Ve sunucuda hayali/eksik bir sayim kaydi olusmamis olmali.
+  const entries = await pool.query(
+    `
+    SELECT id
+    FROM count_entries
+    WHERE room_id=$1 AND stock_id=$2
+    `,
+    [lateRoom.id, lateStock],
+  );
+
+  assert.equal(entries.rowCount, 0);
 });
 test('OTP stops after five wrong attempts', async () => {
   const i = (

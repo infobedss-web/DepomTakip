@@ -199,6 +199,33 @@ export async function offlineQueueCount(): Promise<number> {
 
   return rows.length;
 }
+export async function hasPendingOfflineCountForStock(
+  roomId: string,
+  stockId: string,
+  scope: { user_id: string; business_id: string | null },
+): Promise<boolean> {
+  const rows = await getOfflineOperations(
+    ['PENDING', 'FAILED', 'CONFLICT', 'SYNCING'],
+    scope,
+  );
+
+  return rows.some((row) => {
+    if (row.path !== '/count/offline-submit') {
+      return false;
+    }
+
+    const body = row.body as {
+      room_id?: string;
+      stock_id?: string;
+    } | null;
+
+    return (
+      body?.room_id === roomId &&
+      body?.stock_id === stockId
+    );
+  });
+}
+
 export async function getPendingOfflineCount(): Promise<number> {
   const rows = await getOfflineOperations([
     'PENDING',

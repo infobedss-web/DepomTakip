@@ -155,7 +155,7 @@ auth.post('/auth/pin-login', async (req, res) => {
       JOIN businesses b ON b.id = u.business_id
       WHERE upper(b.code) = upper($1)
         AND u.login_code = $2
-        AND u.role IN ('FIRM_ADMIN', 'WAREHOUSE_STAFF')
+        AND u.role IN ('FIRM_ADMIN', 'WAREHOUSE_STAFF', 'COUNTER')
       LIMIT 1
     `,
     [b.business_code, b.login_code],
@@ -417,7 +417,8 @@ auth.post('/auth/complete', upload.none(), async (req, res) => {
 
     const pinRole =
       i.role === 'FIRM_ADMIN' ||
-      i.role === 'WAREHOUSE_STAFF';
+      i.role === 'WAREHOUSE_STAFF' ||
+      i.role === 'COUNTER';
 
     if (pinRole) {
       assert(
