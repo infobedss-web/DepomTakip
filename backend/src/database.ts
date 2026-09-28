@@ -1,10 +1,10 @@
-﻿import 'dotenv/config';
+import 'dotenv/config';
 import pg from 'pg';
 import { readFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 export const pool = new pg.Pool({
   connectionString:
-    process.env.DATABASE_URL || 'postgresql://bedss:bedss_local@127.0.0.1:55432/bedss',
+    process.env.DATABASE_URL || 'postgresql://depomtakip:depomtakip_local@127.0.0.1:55432/depomtakip',
 });
 export async function transaction<T>(fn: (db: pg.PoolClient) => Promise<T>): Promise<T> {
   const db = await pool.connect();
@@ -46,7 +46,7 @@ export async function migrate() {
         throw error;
       }
     }
-    console.log('BEDSS şeması güncel.');
+    console.log('DepomTakip şeması güncel.');
   } finally {
     try {
       await db.query('SELECT pg_advisory_unlock(982341)');

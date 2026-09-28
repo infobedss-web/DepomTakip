@@ -167,7 +167,7 @@ export function Rooms({ user }: { user: Row }) {
                 </div>
               </div>
               <p className="muted">
-                Personel oda koduyla katılır. Firma yetkilisi onayından sonra atandığı reyonda sayıma
+                Personel oda koduyla katılır. Bayi yetkilisi onayından sonra atandığı reyonda sayıma
                 başlayabilir.
               </p>
               <div className="table-wrap">
@@ -443,7 +443,7 @@ export function Rooms({ user }: { user: Row }) {
               e.preventDefault();
               const b = Object.fromEntries(new FormData(e.currentTarget));
 
-              /* BEDSS ROOM SCOPE GUARD */
+              /* DepomTakip ROOM SCOPE GUARD */
               if (
                 !['FULL', 'BLIND'].includes(type) &&
                 scope.length === 0

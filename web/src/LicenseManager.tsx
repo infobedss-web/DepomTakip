@@ -183,7 +183,7 @@ export function LicenseManager({ firm, onSaved }: Props) {
         <div>
           <strong>{firm.name} — Lisans</strong>
           <div style={{ marginTop: 5, fontSize: 13, color: '#64748b' }}>
-            BEDSS kullanim yetkisini ve lisans anahtarini yonetin.
+            DepomTakip kullanim yetkisini ve lisans anahtarini yonetin.
           </div>
         </div>
 

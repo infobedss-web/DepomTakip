@@ -1,4 +1,4 @@
-﻿-- DepomTakip 032
+-- DepomTakip 032
 -- Firma yetkilisi ve personel icin 6 haneli PIN girisi.
 
 ALTER TABLE users

@@ -13,14 +13,14 @@ test('Mobile count: room join, owner approval, rack scan, blind quantity entry a
   let originalWarehouses: string[] | undefined;
   try {
     await owner.request.post('/api/auth/login', {
-      data: { email: 'bayi@bedss.local', password: 'BedssDemo!2026' },
+      data: { email: 'bayi@depomtakip.local', password: 'DepomTakip!2026' },
     });
     const stocks = await owner.request.get('/api/stocks').then((r) => r.json());
     const item = stocks[0];
     const locations = await owner.request.get('/api/locations').then((r) => r.json());
     const loc = locations.find((l: any) => l.id === item.location_id);
     const users = await owner.request.get('/api/users').then((r) => r.json());
-    const user = users.find((u: any) => u.email === 'sayim@bedss.local');
+    const user = users.find((u: any) => u.email === 'sayim@depomtakip.local');
     counterId = user.id;
     const assignedWarehouses = await owner.request
       .get('/api/users/' + user.id + '/warehouses')
@@ -59,8 +59,8 @@ test('Mobile count: room join, owner approval, rack scan, blind quantity entry a
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto('/');
-    await page.getByLabel('E-posta adresi').fill('sayim@bedss.local');
-    await page.getByLabel('Şifre', { exact: true }).fill('BedssDemo!2026');
+    await page.getByLabel('E-posta adresi').fill('sayim@depomtakip.local');
+    await page.getByLabel('Şifre', { exact: true }).fill('DepomTakip!2026');
     await page.getByRole('button', { name: 'Giriş Yap', exact: true }).click();
     await page.getByLabel('Oda kodu', { exact: true }).fill(room.code);
     await page.getByRole('button', { name: 'Odaya Gir', exact: true }).click();
@@ -122,7 +122,7 @@ test('Mobile count: room join, owner approval, rack scan, blind quantity entry a
     if (roomId) {
       const connectionString =
         process.env.TEST_DATABASE_URL ||
-        'postgresql://bedss:bedss_local@127.0.0.1:55432/bedss_test';
+        'postgresql://depomtakip:depomtakip_local@127.0.0.1:55432/depomtakip_test';
       if (!new URL(connectionString).pathname.endsWith('_test'))
         throw new Error('Test database required');
       const db = new pg.Pool({ connectionString });

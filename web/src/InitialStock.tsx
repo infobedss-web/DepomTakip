@@ -14,7 +14,7 @@ export function InitialStock({
   const [quantities, setQuantities] = useState<QuantityMap>({});
   const [search, setSearch] = useState('');
   const [supplier, setSupplier] = useState('Başlangıç Stok Girişi');
-  const [note, setNote] = useState('BEDSS başlangıç stok kaydı');
+  const [note, setNote] = useState('DepomTakip başlangıç stok kaydı');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -140,7 +140,7 @@ export function InitialStock({
       selectedWarehouse.business_id;
 
     if (!businessId) {
-      setError('Firma bilgisi belirlenemedi.');
+      setError('Bayi bilgisi belirlenemedi.');
       return;
     }
 

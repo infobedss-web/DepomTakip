@@ -9,8 +9,8 @@ test('Quarantine management screen renders without browser errors', async ({ pag
 
   await page.goto('/');
 
-  await page.getByLabel('E-posta').fill('bayi@bedss.local');
-  await page.getByLabel('Şifre').fill('BedssDemo!2026');
+  await page.getByLabel('E-posta').fill('bayi@depomtakip.local');
+  await page.getByLabel('Şifre').fill('DepomTakip!2026');
 
   await page
     .getByRole('button', {

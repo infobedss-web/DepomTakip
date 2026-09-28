@@ -51,7 +51,7 @@ function openDb(): Promise<IDBDatabase> {
         const store = tx?.objectStore(STORE);
         if (store && !store.indexNames.contains('user_id')) store.createIndex('user_id', 'user_id', { unique: false });
         if (store && !store.indexNames.contains('business_id')) store.createIndex('business_id', 'business_id', { unique: false });
-        // V1 kayıtlarında kullanıcı/firma sahipliği yoktu. Tenant verisi karışmasın diye güvenli şekilde temizlenir.
+        // V1 kayıtlarında kullanıcı/bayi sahipliği yoktu. Tenant verisi karışmasın diye güvenli şekilde temizlenir.
         if (oldVersion < 2 && store) store.clear();
       }
     };

@@ -14,8 +14,8 @@ test('Dashboard and Goods Receipt render with the real API array responses', asy
 
   await page.goto('/');
 
-  await page.getByLabel('E-posta adresi').fill('bayi@bedss.local');
-  await page.getByLabel('Şifre', { exact: true }).fill('BedssDemo!2026');
+  await page.getByLabel('E-posta adresi').fill('bayi@depomtakip.local');
+  await page.getByLabel('Şifre', { exact: true }).fill('DepomTakip!2026');
 
   const loginResponse = page.waitForResponse(
     (response) =>

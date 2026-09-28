@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import request from 'supertest';
 process.env.DATABASE_URL =
-  process.env.TEST_DATABASE_URL || 'postgresql://bedss:bedss_local@127.0.0.1:55432/bedss_test';
+  process.env.TEST_DATABASE_URL || 'postgresql://depomtakip:depomtakip_local@127.0.0.1:55432/depomtakip_test';
 assert.match(
   new URL(process.env.DATABASE_URL).pathname,
   /_test$/,
@@ -31,7 +31,7 @@ let business: string,
   room: string,
   uid: string,
   uid2: string;
-const password = 'BedssDemo!2026';
+const password = 'DepomTakip!2026';
 before(async () => {
   await migrate();
   await seed();
@@ -42,7 +42,7 @@ before(async () => {
   ] as const)
     await agent
       .post('/api/auth/login')
-      .send({ email: email + '@bedss.local', password })
+      .send({ email: email + '@depomtakip.local', password })
       .expect(200);
   business = (
     await admin
@@ -98,7 +98,7 @@ test('Authentication, isolation, and granular role boundaries', async () => {
   await request(app).get('/api/stocks').expect(401);
   await request(app)
     .post('/api/auth/login')
-    .send({ email: 'admin@bedss.local', password: 'wrong' })
+    .send({ email: 'admin@depomtakip.local', password: 'wrong' })
     .expect(401);
   await counter.get('/api/stocks').expect(403);
   await counter.get('/api/products').expect(403);

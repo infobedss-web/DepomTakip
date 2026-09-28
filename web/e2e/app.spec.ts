@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const password = 'BedssDemo!2026';
+const password = 'DepomTakip!2026';
 
 test('Owner dashboard and every management screen render without browser errors', async ({
   page,
@@ -11,7 +11,7 @@ test('Owner dashboard and every management screen render without browser errors'
 
   await page.goto('/');
 
-  await page.getByLabel('E-posta adresi').fill('bayi@bedss.local');
+  await page.getByLabel('E-posta adresi').fill('bayi@depomtakip.local');
   await page.getByLabel('Şifre', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Giriş Yap', exact: true }).click();
 
@@ -88,7 +88,7 @@ test('Mobile counter interface is blind, responsive, and restricted', async ({
 
   await page.goto('/');
 
-  await page.getByLabel('E-posta adresi').fill('sayim@bedss.local');
+  await page.getByLabel('E-posta adresi').fill('sayim@depomtakip.local');
   await page.getByLabel('Şifre', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Giriş Yap', exact: true }).click();
 

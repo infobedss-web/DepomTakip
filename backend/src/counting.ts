@@ -223,7 +223,7 @@ counting.post('/count/join', requirePermission('sayim_yap'), async (req, res) =>
   assert(r, 404, 'Oda kodu bulunamadı.');
   await transaction(async (db) => {
     const current = await room(req.user, r.id, db, true);
-    assert(current.status === 'OPEN', 409, 'Firma yetkilisi odayı henüz açmadı.');
+    assert(current.status === 'OPEN', 409, 'Bayi yetkilisi odayı henüz açmadı.');
     await db.query(
       'UPDATE assignments SET joined_at=COALESCE(joined_at,now()) WHERE room_id=$1 AND user_id=$2',
       [r.id, req.user.id],
@@ -244,7 +244,7 @@ async function ready(db: DB, u: User, id: string) {
     `SELECT 1 FROM assignments WHERE room_id=$1 AND user_id=$2 AND approved AND joined_at IS NOT NULL AND agreement_accepted_at IS NOT NULL AND finished_at IS NULL AND activity_status <> 'BREAK'`,
     [id, u.id],
   );
-  assert(a.rowCount, 403, 'Firma yetkilisi onayı bekleniyor veya sayımınızı bitirdiniz.');
+  assert(a.rowCount, 403, 'Bayi yetkilisi onayı bekleniyor veya sayımınızı bitirdiniz.');
   return r;
 }
 counting.post('/count/location', requirePermission('sayim_yap'), async (req, res) => {

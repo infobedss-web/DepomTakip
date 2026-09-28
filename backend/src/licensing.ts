@@ -89,17 +89,17 @@ export async function assertActiveLicense(
   assert(
     license,
     403,
-    'Firma lisansi bulunamadi.',
+    'Bayi lisansi bulunamadi.',
   );
 
   assert(
     license.effective_status === 'ACTIVE',
     403,
     license.effective_status === 'SUSPENDED'
-      ? 'Firma lisansi askida.'
+      ? 'Bayi lisansi askida.'
       : license.effective_status === 'EXPIRED'
-        ? 'Firma lisansinin suresi dolmus.'
-        : 'Firma lisansi aktif degil.',
+        ? 'Bayi lisansinin suresi dolmus.'
+        : 'Bayi lisansi aktif degil.',
   );
 
   return license;
@@ -142,7 +142,7 @@ licensing.get(
     assert(
       license,
       404,
-      'Firma lisansi bulunamadi.',
+      'Bayi lisansi bulunamadi.',
     );
 
     res.json(license);
@@ -454,7 +454,7 @@ licensing.post(
         )
       ).rows[0];
 
-      assert(current, 404, 'Firma lisansi bulunamadi.');
+      assert(current, 404, 'Bayi lisansi bulunamadi.');
 
       if (current.license_key && !body.rotate) {
         return current;
@@ -467,7 +467,7 @@ licensing.post(
           .match(/.{1,4}/g) ?? [];
 
       const licenseKey =
-        `BEDSS-${current.plan_code}-${groups.join('-')}`;
+        `DT-${current.plan_code}-${groups.join('-')}`;
 
       const updated = (
         await db.query(

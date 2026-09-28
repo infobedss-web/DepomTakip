@@ -1,3 +1,15 @@
+# DepomTakip V2.6
+
+Bu paket V2.5 production test sürümünün devamıdır. V2.6; production environment doğrulaması, PostgreSQL backup/restore ve sağlık sürüm bilgisini ekler.
+
+## Windows hızlı başlangıç
+1. `TEST_DEPOMTAKIP.bat` — temiz kurulum, build, migration, seed ve test akışı.
+2. `START_DEPOMTAKIP.bat` — sistemi başlatır.
+3. `VERIFY_PRODUCTION.bat` — production değişkenlerini doğrular.
+4. `BACKUP_DEPOMTAKIP.bat` — PostgreSQL yedeği alır.
+
+Detaylar: `DEPOMTAKIP_V2_6_CHANGES.md` ve `PRODUCTION_DEPLOYMENT.md`.
+
 # BEDSS — İlk çalışan sürüm
 
 BEDSS, bu klasörde sıfırdan geliştirilmiş bağımsız bir depo ve sayım uygulamasıdır. Gereksinim kaynağı kullanıcı mesajıdır; ayrıca bir teknik doküman dosyası sağlanmamıştır.
@@ -45,28 +57,28 @@ Docker test veritabanı oluşturma:
 docker compose exec database createdb -U bedss bedss_test
 ```
 
-Bağlantı varsayılanı `postgresql://bedss:bedss_local@127.0.0.1:55432/bedss`. Başka bağlantı için `api/.env` içinde `DATABASE_URL` ayarlanır. Örnek dosya `api/.env.example` içindedir. Migration betikleri sürümlüdür ve transaction içinde uygulanır. Seed, kullanıcı varsa mevcut verileri değiştirmez.
+Bağlantı varsayılanı `postgresql://depomtakip:depomtakip_local@127.0.0.1:55432/depomtakip`. Başka bağlantı için `api/.env` içinde `DATABASE_URL` ayarlanır. Örnek dosya `api/.env.example` içindedir. Migration betikleri sürümlüdür ve transaction içinde uygulanır. Seed, kullanıcı varsa mevcut verileri değiştirmez.
 
 ## Demo hesapları
 
-Tüm demo hesaplarının şifresi: **`BedssDemo!2026`**
+Tüm demo hesaplarının şifresi: **`DepomTakip!2026`**
 
 | Hesap | Rol | Kapsam |
 | --- | --- | --- |
-| admin@bedss.local | Sistem Yetkilisi | Global |
-| bayi@bedss.local | Bayi Yetkilisi | Marmara Lojistik |
-| sayim@bedss.local | Sayım Görevlisi | Marmara Lojistik |
-| sayim2@bedss.local | İkinci Sayım Görevlisi | Kilit senaryoları |
-| bilirkisi@bedss.local | Bağımsız Bilirkişi | Yalnızca atandığı odalar |
-| misafir@bedss.local | Salt okunur Denetçi | Marmara Lojistik |
-| ege@bedss.local | İkinci Bayi Yetkilisi | Ege Dağıtım; işletme ayrımı |
+| admin@depomtakip.local | Sistem Yetkilisi | Global |
+| bayi@depomtakip.local | Bayi Yetkilisi | Marmara Lojistik |
+| sayim@depomtakip.local | Sayım Görevlisi | Marmara Lojistik |
+| sayim2@depomtakip.local | İkinci Sayım Görevlisi | Kilit senaryoları |
+| bilirkisi@depomtakip.local | Bağımsız Bilirkişi | Yalnızca atandığı odalar |
+| misafir@depomtakip.local | Salt okunur Denetçi | Marmara Lojistik |
+| ege@depomtakip.local | İkinci Bayi Yetkilisi | Ege Dağıtım; işletme ayrımı |
 
 Demo: 2 işletme, 2 depo, 7 lokasyon, 6 ürün, Adet/Koli/Palet birimleri, lot bazlı stoklar ve bir taslak sayım odası. Eylül Depo Sayımı başlangıç/bitişi seed zamanına göre belirlenir.
 
 ## Kör sayımı deneme
 
 1. Bayi hesabıyla **Sayım Odaları → Eylül Depo Sayımı → Odayı Sayıma Aç**.
-2. Ayrı tarayıcı profili veya gizli pencerede sayım hesabıyla giriş yapın. **Oda kodu:** `BEDSS-DEMO`.
+2. Ayrı tarayıcı profili veya gizli pencerede sayım hesabıyla giriş yapın. **Oda kodu:** `DT-DEMO`.
 3. Bayi ekranında **Yenile → Başlamayı Onayla**. Personel ekranında **Onay Durumunu Yenile**.
 4. Reyon kodu `LOC-A01` tarayın/girin. Ürün barkodu `8690000000011` veya SKU `SKU-1001`.
 5. Fiziksel miktarı ve birimi seçip kaydedin. `2 Koli` sunucuda `24 Adet` olarak hesaplanır. Beklenen miktar sayım API'sine dahil edilmez.
@@ -92,7 +104,7 @@ BEDSS/
 │   │   ├── counting.ts  Oda, atama, kör sayım, kilit ve rapor işlemleri
 │   │   ├── helpers.ts   İşletme ve lokasyon kapsamı denetimleri
 │   │   ├── database.ts PostgreSQL havuzu, transaction ve migration
-│   │   └── seed.ts      Bağımsız BEDSS demo verileri
+│   │   └── seed.ts      Bağımsız DepomTakip demo verileri
 │   ├── test/            Gerçek PostgreSQL entegrasyon testleri
 │   └── uploads/         Erişim kontrollü evrak/fotoğraf depolaması
 ├── database/            Sürümlü SQL migration dosyaları
@@ -135,3 +147,17 @@ Playwright kurulu Microsoft Edge'i kullanır, 4100 portunda geçici uygulama ba�
 Detaylı REST sözleşmesi: [docs/API.md](docs/API.md). Tamamlanan ve kalan gereksinimler: [docs/DELIVERY.md](docs/DELIVERY.md).
 
 Teknik başvuru kaynakları: [Vite başlangıç belgesi](https://vite.dev/guide/), [PostgreSQL açık kilitleme belgesi](https://www.postgresql.org/docs/17/explicit-locking.html).
+
+- V2.3: Sayım Görevlisi özel telefon/kör sayım arayüzü eklendi.
+
+---
+
+## DepomTakip V2.5 hızlı başlangıç
+
+Güncel kullanım için eski BEDSS komutları yerine kökteki yardımcı dosyaları kullanın:
+
+- `TEST_DEPOMTAKIP.bat` — tek komutta production öncesi otomatik doğrulama.
+- `START_DEPOMTAKIP.bat` — yerel PostgreSQL + migration + seed + Web/API başlatma.
+- `STOP_DEPOMTAKIP_DB.bat` — DepomTakip yerel PostgreSQL kümesini durdurma.
+
+Güncel demo kullanıcıları `@depomtakip.local` alan adını ve `DepomTakip!2026` parolasını kullanır. Güncel değişiklikler `DEPOMTAKIP_V2_5_CHANGES.md` içindedir.

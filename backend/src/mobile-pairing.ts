@@ -107,7 +107,7 @@ mobilePairing.post(
     const lanAddress = getLanAddress();
     const port = Number(process.env.PORT || 4000);
 
-    // QR doğrudan BEDSS Web/PWA adresini açar.
+    // QR doğrudan DepomTakip Web/PWA adresini açar.
     const serverUrl = `http://${lanAddress}:${port}`;
 
     const qr = await QRCode.toDataURL(serverUrl, {
@@ -127,6 +127,6 @@ mobilePairing.post(
 mobilePairing.post('/mobile-pairing/resolve', async (_req, res) => {
   res.status(410).json({
     error:
-      'QR eşleştirme yerine telefon kamerasıyla BEDSS Web bağlantısını açın.',
+      'QR eşleştirme yerine telefon kamerasıyla DepomTakip Web bağlantısını açın.',
   });
 });

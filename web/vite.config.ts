@@ -11,8 +11,8 @@ export default defineConfig({
       injectRegister: 'auto',
 
       manifest: {
-        name: 'BEDSS Depo ve Sayim Sistemi',
-        short_name: 'BEDSS',
+        name: 'DepomTakip Depo ve Sayım Sistemi',
+        short_name: 'DepomTakip',
         description:
           'Depo, barkod, kor sayim ve saha operasyon sistemi',
 
@@ -51,7 +51,7 @@ export default defineConfig({
             handler: 'CacheFirst',
 
             options: {
-              cacheName: 'bedss-images',
+              cacheName: 'depomtakip-images',
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 * 30

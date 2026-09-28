@@ -304,7 +304,7 @@ export function GoodsReceipt({
 
     if (!businessId) {
       setError(
-        'İşletme bilgisi belirlenemedi.',
+        'Bayi bilgisi belirlenemedi.',
       );
       return;
     }

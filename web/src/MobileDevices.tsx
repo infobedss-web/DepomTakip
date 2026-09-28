@@ -37,10 +37,10 @@ export function MobileDevices() {
     <div style={{ maxWidth: 900 }}>
       <div className="page-heading">
         <div>
-          <div className="eyebrow">BEDSS MOBILE</div>
+          <div className="eyebrow">DepomTakip MOBILE</div>
           <h1>Mobil Cihazlar</h1>
           <p>
-            Sayım görevlilerinin telefonlarını bu BEDSS sistemine güvenli
+            Sayım görevlilerinin telefonlarını bu DepomTakip sistemine güvenli
             şekilde bağlayın.
           </p>
         </div>
@@ -80,8 +80,8 @@ export function MobileDevices() {
             <h2>Yeni Mobil Cihaz Bağla</h2>
 
             <p className="muted" style={{ maxWidth: 650 }}>
-              BEDSS Mobile yüklü telefondan oluşturacağınız QR kodu okutun.
-              Telefon bu bilgisayardaki BEDSS sisteminin bağlantı bilgilerini
+              DepomTakip Mobile yüklü telefondan oluşturacağınız QR kodu okutun.
+              Telefon bu bilgisayardaki DepomTakip sisteminin bağlantı bilgilerini
               otomatik olarak alacaktır.
             </p>
 
@@ -101,7 +101,7 @@ export function MobileDevices() {
             <h2>Telefondan QR kodu okutun</h2>
 
             <p className="muted">
-              BEDSS Mobile → Sistem Bağlantısı → QR Kod ile Bağlan
+              DepomTakip Mobile → Sistem Bağlantısı → QR Kod ile Bağlan
             </p>
 
             <div
@@ -118,7 +118,7 @@ export function MobileDevices() {
                 src={pairing.qr}
                 width={300}
                 height={300}
-                alt="BEDSS mobil eşleştirme QR kodu"
+                alt="DepomTakip mobil eşleştirme QR kodu"
               />
             </div>
 
@@ -140,7 +140,7 @@ export function MobileDevices() {
               </div>
 
               <div style={{ marginTop: 8 }}>
-                <strong>BEDSS Adresi:</strong> {pairing.serverUrl}
+                <strong>DepomTakip Adresi:</strong> {pairing.serverUrl}
               </div>
 
               <div style={{ marginTop: 8 }}>

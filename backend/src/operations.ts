@@ -3282,7 +3282,7 @@ operations.post(
           source.business_id ===
             target.business_id,
           409,
-          'Farkl? firmalar aras?nda depo transferi yap?lamaz.',
+          'Farkl? bayiler aras?nda depo transferi yap?lamaz.',
         );
 
         const available =

@@ -7,7 +7,7 @@ import request from 'supertest';
 
 process.env.DATABASE_URL =
   process.env.TEST_DATABASE_URL ||
-  'postgresql://bedss:bedss_local@127.0.0.1:55432/bedss_test';
+  'postgresql://depomtakip:depomtakip_local@127.0.0.1:55432/depomtakip_test';
 
 assert.match(
   new URL(process.env.DATABASE_URL).pathname,
@@ -23,7 +23,7 @@ const admin = request.agent(app);
 const owner = request.agent(app);
 const other = request.agent(app);
 
-const password = 'BedssDemo!2026';
+const password = 'DepomTakip!2026';
 const suffix = randomUUID().slice(0, 8);
 
 let businessId: string;
@@ -127,7 +127,7 @@ before(async () => {
   await admin
     .post('/api/auth/login')
     .send({
-      email: 'admin@bedss.local',
+      email: 'admin@depomtakip.local',
       password,
     })
     .expect(200);
@@ -135,7 +135,7 @@ before(async () => {
   await other
     .post('/api/auth/login')
     .send({
-      email: 'ege@bedss.local',
+      email: 'ege@depomtakip.local',
       password,
     })
     .expect(200);

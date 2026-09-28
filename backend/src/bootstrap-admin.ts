@@ -15,11 +15,11 @@ export async function ensureBootstrapAdmin() {
 
   const email =
     process.env.BEDSS_BOOTSTRAP_ADMIN_EMAIL ||
-    'admin@bedss.local';
+    'admin@depomtakip.local';
 
   const password =
     process.env.BEDSS_BOOTSTRAP_ADMIN_PASSWORD ||
-    'BedssDemo!2026';
+    'DepomTakip!2026';
 
   const passwordHash = await bcrypt.hash(password, 12);
 
@@ -49,5 +49,5 @@ export async function ensureBootstrapAdmin() {
     ],
   );
 
-  console.log('BEDSS ilk Super Admin hazirlandi.');
+  console.log('DepomTakip ilk Merkez yöneticisi hazırlandı.');
 }

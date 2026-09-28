@@ -76,7 +76,7 @@ export function Counting({ user, logout }: { user: Row; logout: () => Promise<vo
     );
 
     window.addEventListener(
-      'bedss-offline-queue-change',
+      'depomtakip-offline-queue-change',
       refreshOfflineState,
     );
 
@@ -94,7 +94,7 @@ export function Counting({ user, logout }: { user: Row; logout: () => Promise<vo
       );
 
       window.removeEventListener(
-        'bedss-offline-queue-change',
+        'depomtakip-offline-queue-change',
         refreshOfflineState,
       );
     };
@@ -434,7 +434,7 @@ export function Counting({ user, logout }: { user: Row; logout: () => Promise<vo
           <span className="brand-icon">
             <Boxes size={22} />
           </span>
-          BEDSS <span className="count-label">SAHA</span>
+          DepomTakip <span className="count-label">SAHA</span>
         </div>
         <button className="icon-button" aria-label="Çıkış" onClick={() => void logout()}>
           <LogOut size={20} />
@@ -487,7 +487,7 @@ export function Counting({ user, logout }: { user: Row; logout: () => Promise<vo
                 <input
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  placeholder="BEDSS-…"
+                  placeholder="DepomTakip-…"
                 />
               </label>
               <div className="button-row">
@@ -997,7 +997,7 @@ export function Counting({ user, logout }: { user: Row; logout: () => Promise<vo
           </Modal>
         )}
       </main>
-      <footer>BEDSS · Güvenli saha sayımı</footer>
+      <footer>DepomTakip · Güvenli saha sayımı</footer>
     </div>
   );
 }

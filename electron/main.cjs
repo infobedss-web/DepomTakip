@@ -1,4 +1,4 @@
-﻿const { app, BrowserWindow, dialog } = require("electron");
+const { app, BrowserWindow, dialog } = require("electron");
 const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
@@ -28,7 +28,7 @@ app.on("second-instance", () => {
 
 function appRoot() {
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, "bedss");
+    return path.join(process.resourcesPath, "depomtakip");
   }
 
   return path.resolve(__dirname, "..");
@@ -36,7 +36,7 @@ function appRoot() {
 
 function runtimeRoot() {
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, "bedss", "runtime");
+    return path.join(process.resourcesPath, "depomtakip", "runtime");
   }
 
   return path.join(path.resolve(__dirname, ".."), "electron-runtime", "runtime");
@@ -161,7 +161,7 @@ function initializePostgres(pgBin, dataDir) {
     config,
     [
       "",
-      "# BEDSS Electron",
+      "# DepomTakip Electron",
       `port = ${PG_PORT}`,
       "listen_addresses = '127.0.0.1'",
       ""
@@ -250,7 +250,7 @@ function prepareDatabase(pgBin, env) {
       { env }
     );
 
-    log("BEDSS database created");
+    log("DepomTakip database created");
   }
 
   run(
@@ -304,7 +304,7 @@ function runMigrationsAndSeed(root, nodeExe, env) {
 async function startApi(root, nodeExe, env) {
   if (await apiHealth()) {
     throw new Error(
-      `Port ${API_PORT} is already serving BEDSS. Close the old BEDSS-Kur.cmd window and start BEDSS again.`
+      `Port ${API_PORT} is already serving DepomTakip. Close the old DepomTakip window and start DepomTakip again.`
     );
   }
 
@@ -330,11 +330,11 @@ async function startApi(root, nodeExe, env) {
 
   if (!(await waitForApi())) {
     throw new Error(
-      `BEDSS API could not start. Log: ${apiLog}`
+      `DepomTakip API could not start. Log: ${apiLog}`
     );
   }
 
-  log("BEDSS API ready");
+  log("DepomTakip API ready");
 }
 
 function createWindow() {
@@ -346,7 +346,7 @@ function createWindow() {
     show: false,
     autoHideMenuBar: true,
     backgroundColor: "#ffffff",
-    title: "BEDSS",
+    title: "DepomTakip",
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -419,7 +419,7 @@ app.whenReady().then(async () => {
 
     const env = buildEnvironment();
 
-    log(`BEDSS root: ${root}`);
+    log(`DepomTakip root: ${root}`);
     log(`User root: ${userRoot()}`);
 
     initializePostgres(pgBin, dataDir);
@@ -433,7 +433,7 @@ app.whenReady().then(async () => {
     log(error.stack || error.message);
 
     dialog.showErrorBox(
-      "BEDSS baslatilamadi",
+      "DepomTakip baslatilamadi",
       `${error.message}\n\nLog:\n${path.join(userRoot(), "electron.log")}`
     );
 

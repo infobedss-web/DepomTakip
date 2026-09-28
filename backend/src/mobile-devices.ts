@@ -21,7 +21,7 @@ mobileDevices.get('/mobile-devices', async (req, res) => {
 
   if (!businessId && req.user.role !== 'SUPER_ADMIN') {
     res.status(400).json({
-      error: 'Firma bilgisi bulunamadı.',
+      error: 'Bayi bilgisi bulunamadı.',
     });
     return;
   }

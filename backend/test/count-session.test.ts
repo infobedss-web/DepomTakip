@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 
 process.env.DATABASE_URL =
   process.env.DATABASE_URL ||
-  'postgresql://bedss:bedss_local@127.0.0.1:55432/bedss_test';
+  'postgresql://depomtakip:depomtakip_local@127.0.0.1:55432/depomtakip_test';
 
 if (!process.env.DATABASE_URL.endsWith('_test')) {
   throw new Error(
@@ -39,10 +39,10 @@ test(
       .post('/api/auth/login')
       .send({
         email:
-          'admin@bedss.local',
+          'admin@depomtakip.local',
 
         password:
-          'BedssDemo!2026',
+          'DepomTakip!2026',
       })
       .expect(200);
 

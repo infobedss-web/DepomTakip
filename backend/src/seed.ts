@@ -7,7 +7,7 @@ export async function seed() {
       console.log('Veriler mevcut; seed atlandı.');
       return;
     }
-    const hash = await bcrypt.hash('BedssDemo!2026', 12);
+    const hash = await bcrypt.hash('DepomTakip!2026', 12);
     const business = (
       await db.query(
         "INSERT INTO businesses(name,tax_number) VALUES('Marmara Lojistik','1234567890') RETURNING id",
@@ -19,13 +19,13 @@ export async function seed() {
       )
     ).rows[0].id;
     const accounts = [
-      ['Sistem Yetkilisi', 'admin@bedss.local', 'SUPER_ADMIN', null],
-      ['Ayşe Yılmaz', 'bayi@bedss.local', 'OWNER', business],
-      ['Mehmet Demir', 'sayim@bedss.local', 'COUNTER', business],
-      ['Zeynep Kaya', 'sayim2@bedss.local', 'COUNTER', business],
-      ['Selin Aydın', 'bilirkisi@bedss.local', 'AUDITOR', null],
-      ['Denetçi', 'misafir@bedss.local', 'GUEST', business],
-      ['Ege Yetkilisi', 'ege@bedss.local', 'OWNER', other],
+      ['Sistem Yetkilisi', 'admin@depomtakip.local', 'SUPER_ADMIN', null],
+      ['Ayşe Yılmaz', 'bayi@depomtakip.local', 'OWNER', business],
+      ['Mehmet Demir', 'sayim@depomtakip.local', 'COUNTER', business],
+      ['Zeynep Kaya', 'sayim2@depomtakip.local', 'COUNTER', business],
+      ['Selin Aydın', 'bilirkisi@depomtakip.local', 'AUDITOR', null],
+      ['Denetçi', 'misafir@depomtakip.local', 'GUEST', business],
+      ['Ege Yetkilisi', 'ege@depomtakip.local', 'OWNER', other],
     ];
     const ids: Record<string, string> = {};
     for (const [name, email, role, bid] of accounts) {
@@ -161,15 +161,15 @@ export async function seed() {
     }
     const room = (
       await db.query(
-        "INSERT INTO rooms(business_id,warehouse_id,name,code,count_type,method,starts_at,ends_at,created_by) VALUES($1,$2,'Eylül Depo Sayımı','BEDSS-DEMO','FULL','HYBRID',now()-interval '1 day',now()+interval '30 days',$3) RETURNING id",
-        [business, wh, ids['bayi@bedss.local']],
+        "INSERT INTO rooms(business_id,warehouse_id,name,code,count_type,method,starts_at,ends_at,created_by) VALUES($1,$2,'Eylül Depo Sayımı','DT-DEMO','FULL','HYBRID',now()-interval '1 day',now()+interval '30 days',$3) RETURNING id",
+        [business, wh, ids['bayi@depomtakip.local']],
       )
     ).rows[0].id;
     await db.query(
       'INSERT INTO room_items SELECT $1,s.id,s.physical,p.purchase_price FROM stocks s JOIN products p ON p.id=s.product_id WHERE p.business_id=$2',
       [room, business],
     );
-    for (const email of ['sayim@bedss.local', 'sayim2@bedss.local', 'bilirkisi@bedss.local']) {
+    for (const email of ['sayim@depomtakip.local', 'sayim2@depomtakip.local', 'bilirkisi@depomtakip.local']) {
       await db.query(
         `INSERT INTO user_warehouse_assignments(user_id,warehouse_id)
          VALUES($1,$2)
@@ -185,10 +185,10 @@ export async function seed() {
     }
     await db.query(
       "INSERT INTO audit_logs(business_id,actor_id,action,entity_type,entity_id) VALUES($1,$2,'DEMO_SEEDED','business',$3)",
-      [business, ids['admin@bedss.local'], business],
+      [business, ids['admin@depomtakip.local'], business],
     );
   });
-  console.log('BEDSS demo verileri hazır.');
+  console.log('DepomTakip demo verileri hazır.');
 }
 
 /* BEDSS_DIRECT_SEED_ENTRY */

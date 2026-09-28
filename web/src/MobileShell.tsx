@@ -58,7 +58,7 @@ export function MobileShell({
     <div className="mobile-shell">
       <header className="mobile-header">
         <div>
-          <small>BEDSS SAHA</small>
+          <small>DepomTakip SAHA</small>
           <strong>{user.name}</strong>
         </div>
 
@@ -213,7 +213,7 @@ export function MobileShell({
                 <span>
                   <strong>Yetki Kontrolü</strong>
                   <small>
-                    İşlemler firma, depo ve kullanıcı yetkisine göre sunucuda doğrulanır.
+                    İşlemler bayi, depo ve kullanıcı yetkisine göre sunucuda doğrulanır.
                   </small>
                 </span>
               </div>

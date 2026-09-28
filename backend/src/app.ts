@@ -59,7 +59,7 @@ app.use((req, res, next) => {
 });
 app.get('/api/health', async (_req, res) => {
   await pool.query('SELECT 1');
-  res.json({ status: 'ok', application: 'BEDSS', database: 'PostgreSQL' });
+  res.json({ status: 'ok', application: 'DepomTakip', version: '2.6.0', database: 'PostgreSQL' });
 });
 
 
@@ -141,7 +141,7 @@ app.use((error: any, _req: express.Request, res: express.Response, _next: expres
     res.status(400).json({ error: 'Geçersiz istek.' });
     return;
   }
-  console.error('[BEDSS API ERROR]', error);
+  console.error('[DepomTakip API ERROR]', error);
 
   const detail =
     process.env.NODE_ENV !== 'production'

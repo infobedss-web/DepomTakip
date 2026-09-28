@@ -17,9 +17,12 @@ export type SyncResult = {
 };
 
 function getDeviceId(): string {
-  const key = 'bedss_device_id';
-  let id = localStorage.getItem(key);
-  if (!id) { id = crypto.randomUUID(); localStorage.setItem(key, id); }
+  const key = 'depomtakip_device_id';
+  const legacyKey = 'bedss_device_id';
+  let id = localStorage.getItem(key) || localStorage.getItem(legacyKey);
+  if (!id) id = crypto.randomUUID();
+  localStorage.setItem(key, id);
+  if (localStorage.getItem(legacyKey)) localStorage.removeItem(legacyKey);
   return id;
 }
 
@@ -53,7 +56,7 @@ export async function queueOfflineOperation(
   await saveOfflineOperation(operation);
 
   window.dispatchEvent(
-    new CustomEvent('bedss-offline-queue-change'),
+    new CustomEvent('depomtakip-offline-queue-change'),
   );
 
   return operation;
@@ -262,7 +265,7 @@ export async function syncOfflineOperations(): Promise<SyncResult> {
   }
 
   window.dispatchEvent(
-    new CustomEvent('bedss-offline-queue-change'),
+    new CustomEvent('depomtakip-offline-queue-change'),
   );
 
   return {
@@ -287,6 +290,11 @@ export async function triggerOfflineSync() {
 }
 
 export function installOfflineSyncListeners() {
+  const interval = window.setInterval(() => {
+    if (navigator.onLine && document.visibilityState === 'visible') {
+      void triggerOfflineSync();
+    }
+  }, 60_000);
   window.addEventListener('online', () => {
     void triggerOfflineSync();
   });

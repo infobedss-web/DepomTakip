@@ -52,7 +52,7 @@ auth.post('/auth/login', async (req, res) => {
 
   /* BEDSS_ONE_TIME_LICENSE_ACTIVATION */
   if (
-    u.role === 'FIRM_ADMIN' &&
+    ['OWNER', 'FIRM_ADMIN'].includes(u.role) &&
     u.business_id &&
     !u.license_activated_at
   ) {
@@ -74,7 +74,7 @@ auth.post('/auth/login', async (req, res) => {
     assert(
       firmLicense,
       403,
-      'Firma lisansı bulunamadı.',
+      'Bayi lisansı bulunamadı.',
     );
 
     assert(
@@ -82,7 +82,7 @@ auth.post('/auth/login', async (req, res) => {
         new Date(firmLicense.starts_at) <= new Date() &&
         new Date(firmLicense.ends_at) > new Date(),
       403,
-      'Firma lisansı aktif değil veya süresi dolmuş.',
+      'Bayi lisansı aktif değil veya süresi dolmuş.',
     );
 
     assert(
@@ -117,7 +117,7 @@ auth.post('/auth/login', async (req, res) => {
     ]);
     await audit(db, u, 'LOGIN', 'user', u.id);
   });
-  res.cookie('bedss_session', sid, {
+  res.cookie('depomtakip_session', sid, {
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     secure: process.env.NODE_ENV === 'production',
@@ -172,13 +172,13 @@ auth.post('/auth/pin-login', async (req, res) => {
   assert(
     u && valid && u.status === 'ACTIVE',
     401,
-    'Firma kodu, kullanici numarasi veya PIN hatali.',
+    'Bayi kodu, kullanici numarasi veya PIN hatali.',
   );
 
   assert(
     u.business_status === 'ACTIVE',
     403,
-    'Firma hesabi aktif degil.',
+    'Bayi hesabi aktif degil.',
   );
 
   const licenseResult = await pool.query(
@@ -199,10 +199,10 @@ auth.post('/auth/pin-login', async (req, res) => {
       new Date(firmLicense.starts_at) <= new Date() &&
       new Date(firmLicense.ends_at) > new Date(),
     403,
-    'Firma lisansi aktif degil veya suresi dolmus.',
+    'Bayi lisansi aktif degil veya suresi dolmus.',
   );
 
-  if (u.role === 'FIRM_ADMIN' && !u.license_activated_at) {
+  if (['OWNER', 'FIRM_ADMIN'].includes(u.role) && !u.license_activated_at) {
     assert(
       !!b.license_key,
       403,
@@ -233,7 +233,7 @@ auth.post('/auth/pin-login', async (req, res) => {
     await audit(db, u, 'LOGIN', 'user', u.id);
   });
 
-  res.cookie('bedss_session', sid, {
+  res.cookie('depomtakip_session', sid, {
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     secure: process.env.NODE_ENV === 'production',
@@ -256,9 +256,9 @@ auth.get('/auth/me', authenticate, (req, res) =>
   res.json({ user: { ...req.user, permissions: effective(req.user) } }),
 );
 auth.post('/auth/logout', async (req, res) => {
-  if (req.cookies.bedss_session)
-    await pool.query('DELETE FROM sessions WHERE token_hash=$1', [hash(req.cookies.bedss_session)]);
-  res.clearCookie('bedss_session', { path: '/', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict', secure: process.env.NODE_ENV === 'production' });
+  if (req.cookies.depomtakip_session)
+    await pool.query('DELETE FROM sessions WHERE token_hash=$1', [hash(req.cookies.depomtakip_session)]);
+  res.clearCookie('depomtakip_session', { path: '/', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict', secure: process.env.NODE_ENV === 'production' });
   res.json({ ok: true });
 });
 auth.post('/invitations', authenticate, requirePermission('kullanici_yonet'), async (req, res) => {
@@ -283,7 +283,7 @@ auth.post('/invitations', authenticate, requirePermission('kullanici_yonet'), as
     tenant(req.user, b.business_id);
     assert(b.permissions.length === 0, 403, 'Ek izinleri sistem yetkilisi yönetir.');
   }
-  assert(b.role === 'AUDITOR' || !!b.business_id, 400, 'İşletme seçiniz.');
+  assert(b.role === 'AUDITOR' || !!b.business_id, 400, 'Bayi seçiniz.');
   assert(
     !['WAREHOUSE_STAFF', 'COUNTER', 'AUDITOR', 'GUEST'].includes(b.role) || b.permissions.length === 0,
     400,
@@ -315,7 +315,7 @@ auth.post('/invitations', authenticate, requirePermission('kullanici_yonet'), as
     assert(
       license,
       403,
-      'Firma lisansi bulunamadi.',
+      'Bayi lisansi bulunamadi.',
     );
 
     assert(
@@ -336,7 +336,7 @@ auth.post('/invitations', authenticate, requirePermission('kullanici_yonet'), as
           b.role,
           b.business_id,
           b.permissions,
-          b.role === 'FIRM_ADMIN' ? null : new Date(),
+          ['OWNER', 'FIRM_ADMIN'].includes(b.role) ? null : new Date(),
         ],
       )
     ).rows[0];
@@ -500,6 +500,157 @@ function validFile(f: Express.Multer.File) {
       f.buffer.subarray(0, 3).toString('hex') === 'ffd8ff')
   );
 }
+
+
+auth.post('/personnel/quick-create', authenticate, requirePermission('kullanici_yonet'), async (req, res) => {
+  const body = z
+    .object({
+      name: z.string().trim().min(2).max(120),
+      email: z.email().optional().or(z.literal('')),
+      role: z.enum(['WAREHOUSE_STAFF', 'COUNTER']),
+      business_id: z.uuid().optional(),
+      login_code: z.string().regex(/^\d{6}$/),
+      pin: z.string().regex(/^\d{6}$/),
+      warehouse_ids: z.array(z.uuid()).max(100).default([]),
+    })
+    .parse(req.body);
+
+  const businessId = req.user.role === 'SUPER_ADMIN' ? body.business_id : req.user.business_id;
+
+  assert(businessId, 400, 'Bayi seçiniz.');
+  tenant(req.user, businessId);
+
+  const business = (
+    await pool.query('SELECT id,status FROM businesses WHERE id=$1', [businessId])
+  ).rows[0];
+
+  assert(business, 404, 'Bayi bulunamadı.');
+  assert(business.status === 'ACTIVE', 403, 'Bayi hesabı aktif değil.');
+
+  const license = (
+    await pool.query(
+      `
+      SELECT
+        status,
+        starts_at,
+        ends_at,
+        max_users,
+        (
+          SELECT count(*)
+          FROM users
+          WHERE business_id=$1
+            AND status <> 'REJECTED'
+        )::integer AS user_count
+      FROM business_licenses
+      WHERE business_id=$1
+      LIMIT 1
+      `,
+      [businessId],
+    )
+  ).rows[0];
+
+  assert(license, 403, 'Bayi lisansı bulunamadı.');
+  assert(
+    license.status === 'ACTIVE' &&
+      new Date(license.starts_at) <= new Date() &&
+      new Date(license.ends_at) > new Date(),
+    403,
+    'Bayi lisansı aktif değil veya süresi dolmuş.',
+  );
+  assert(
+    Number(license.user_count) < Number(license.max_users),
+    409,
+    'Lisans personel limiti doldu.',
+  );
+
+  const uniqueWarehouseIds = [...new Set(body.warehouse_ids)];
+
+  if (uniqueWarehouseIds.length) {
+    const warehouses = await pool.query(
+      `
+      SELECT id
+      FROM warehouses
+      WHERE business_id=$1
+        AND id=ANY($2::uuid[])
+      `,
+      [businessId, uniqueWarehouseIds],
+    );
+
+    assert(
+      warehouses.rowCount === uniqueWarehouseIds.length,
+      400,
+      'Seçilen depolar aynı bayiye ait olmalıdır.',
+    );
+  }
+
+  const passwordHash = await bcrypt.hash(body.pin, 12);
+  const personnelEmail = body.email
+    ? body.email.toLowerCase()
+    : `personel-${String(businessId).slice(0, 8)}-${body.login_code}@depomtakip.local`;
+
+  const created = await transaction(async (db) => {
+    const user = (
+      await db.query(
+        `
+        INSERT INTO users(
+          name,
+          email,
+          role,
+          business_id,
+          password_hash,
+          status,
+          permissions,
+          denied_permissions,
+          license_activated_at,
+          login_code
+        )
+        VALUES($1,$2,$3,$4,$5,'ACTIVE','{}'::text[],'{}'::text[],now(),$6)
+        RETURNING id,name,email,role,business_id,status,login_code
+        `,
+        [
+          body.name,
+          personnelEmail,
+          body.role,
+          businessId,
+          passwordHash,
+          body.login_code,
+        ],
+      )
+    ).rows[0];
+
+    for (const warehouseId of uniqueWarehouseIds) {
+      await db.query(
+        `
+        INSERT INTO user_warehouse_assignments(user_id,warehouse_id,assigned_by)
+        VALUES($1,$2,$3)
+        `,
+        [user.id, warehouseId, req.user.id],
+      );
+    }
+
+    await audit(db, req.user, 'PERSONNEL_QUICK_CREATED', 'user', user.id, businessId, {
+      role: body.role,
+      warehouse_ids: uniqueWarehouseIds,
+    });
+
+    return user;
+  });
+
+  res.status(201).json({
+    user: created,
+    login: {
+      business_id: businessId,
+      login_code: body.login_code,
+      pin: body.pin,
+      license_required: false,
+    },
+    message:
+      body.role === 'COUNTER'
+        ? 'Sayım görevlisi oluşturuldu. Ayrı lisans gerekmez.'
+        : 'Depo görevlisi oluşturuldu. Ayrı lisans gerekmez.',
+  });
+});
+
 auth.get('/users', authenticate, requirePermission('kullanici_yonet'), async (req, res) => {
   const r = await pool.query(
     "SELECT u.id,u.name,u.email,u.role,u.status,u.business_id,u.permissions,u.denied_permissions,b.name business_name,(SELECT json_agg(json_build_object('id',d.id,'name',d.original_name)) FROM documents d WHERE d.user_id=u.id) documents FROM users u LEFT JOIN businesses b ON b.id=u.business_id WHERE u.status <> 'PASSIVE' AND ($1::boolean OR u.business_id=$2) ORDER BY u.created_at DESC",
@@ -649,7 +800,7 @@ auth.get('/documents/:id', authenticate, async (req, res) => {
     'Bu dosyaya erişiminiz yok.',
   );
   assert(d.content, 404, 'Dosya içeriği bulunamadı.');
-  res.type(d.mime_type).setHeader('Content-Disposition', 'attachment; filename="bedss-document"');
+  res.type(d.mime_type).setHeader('Content-Disposition', 'attachment; filename="depomtakip-document"');
   res.send(d.content);
 });
 

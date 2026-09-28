@@ -136,7 +136,7 @@ export function Scanner({ onScan }: { onScan: (code: string) => void }) {
           );
         }
         /*
-         * BEDSS mobil taramada ZXing kullanir.
+         * DepomTakip mobil taramada ZXing kullanir.
          * Native BarcodeDetector cihazdan cihaza tutarsiz
          * calistigi icin burada bilincli olarak kullanilmiyor.
          */const reader = new BrowserMultiFormatReader();
@@ -175,7 +175,7 @@ export function Scanner({ onScan }: { onScan: (code: string) => void }) {
           )
         ) {
           setError(
-            'Telefon kamerasini kullanmak icin BEDSS HTTPS adresinden acilmalidir.',
+            'Telefon kamerasini kullanmak icin DepomTakip HTTPS adresinden acilmalidir.',
           );
           return;
         }

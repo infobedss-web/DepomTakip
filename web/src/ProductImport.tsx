@@ -177,12 +177,12 @@ export function ProductImport({ user }: { user: Row }) {
       return;
     const name = businesses.find((b) => b.id === businessId)?.name;
     if (!name) {
-      setError('İşletmeyi seçin.');
+      setError('Bayiyi seçin.');
       return;
     }
     if (
       !window.confirm(
-        `${name} işletmesine ${mapped.rows.length.toLocaleString('tr-TR')} ürün aktarılacak. Onaylıyor musunuz?`,
+        `${name} bayisine ${mapped.rows.length.toLocaleString('tr-TR')} ürün aktarılacak. Onaylıyor musunuz?`,
       )
     )
       return;
@@ -244,7 +244,7 @@ export function ProductImport({ user }: { user: Row }) {
     if (running.current || reading) return;
     if (
       !window.confirm(
-        `${selected.business_name} işletmesindeki ${selected.filename} aktarımına devam edilsin mi? Kaydedilmiş ürünler tekrar eklenmez.`,
+        `${selected.business_name} bayisindeki ${selected.filename} aktarımına devam edilsin mi? Kaydedilmiş ürünler tekrar eklenmez.`,
       )
     )
       return;
@@ -282,9 +282,9 @@ export function ProductImport({ user }: { user: Row }) {
           saklayın.
         </p>
         <label>
-          İşletme
+          Bayi
           <select
-            aria-label="Aktarım işletmesi"
+            aria-label="Aktarım bayisi"
             value={businessId}
             disabled={busy || user.role !== 'SUPER_ADMIN'}
             onChange={(e) => {
@@ -294,7 +294,7 @@ export function ProductImport({ user }: { user: Row }) {
               setServerErrors([]);
             }}
           >
-            <option value="">İşletme seçin</option>
+            <option value="">Bayi seçin</option>
             {businesses.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -340,7 +340,7 @@ export function ProductImport({ user }: { user: Row }) {
             <div>
               <strong>Ürünleri içe aktarmaya hazırla</strong>
               <p className="muted">
-                Firma, dosya ve kolon eşleştirmelerini kontrol edip ürünleri BEDSS veritabanına kaydedin.
+                Bayi, dosya ve kolon eşleştirmelerini kontrol edip ürünleri DepomTakip veritabanına kaydedin.
               </p>
             </div>
 
@@ -384,7 +384,7 @@ export function ProductImport({ user }: { user: Row }) {
                 <tr>
                   <th>Sütun</th>
                   <th>Excel başlığı</th>
-                  <th>BEDSS alanı</th>
+                  <th>DepomTakip alanı</th>
                 </tr>
               </thead>
               <tbody>

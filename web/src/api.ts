@@ -29,7 +29,7 @@ if (!r.ok) {
 export type Row = Record<string, any>;
 export const roles: Record<string, string> = {
   SUPER_ADMIN: 'Sistem Yetkilisi',
-  FIRM_ADMIN: 'Firma Yöneticisi',
+  FIRM_ADMIN: 'Bayi Yetkilisi',
   WAREHOUSE_STAFF: 'Depo Personeli',
   OWNER: 'Bayi Yetkilisi',
   COUNTER: 'Sayım Görevlisi',

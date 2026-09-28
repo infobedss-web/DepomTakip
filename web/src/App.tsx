@@ -45,10 +45,14 @@ import { MobileShell } from './MobileShell';
 import { LicenseManager } from './LicenseManager';
 import { BedssGuide } from './BedssGuide';
 import { MobileDevices } from './MobileDevices';
+import { WarehouseStaffShell } from './WarehouseStaffShell';
+import { CounterShell } from './CounterShell';
+import { BayiControlCenter } from './BayiControlCenter';
 const nav = [
   ['dashboard', 'Genel Bakış', LayoutDashboard],
+  ['control-center', 'Operasyon Merkezi', ScanLine],
   ['mobile-devices', 'Mobil Cihazlar', Smartphone],
-  ['businesses', 'Firmalar', Building2],
+  ['businesses', 'Bayiler', Building2],
   ['locations', 'Depolar & Lokasyonlar', Warehouse],
   ['products', 'Ürün & Stok', Package],
   ['product-import', 'Excel / CSV Ürün Aktar', Package],
@@ -107,7 +111,7 @@ export function App() {
     [loading, setLoading] = useState(true),
     [page, setPage] = useState('dashboard'),
     [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(() =>
-      localStorage.getItem('bedss_selected_business_id'),
+      localStorage.getItem('depomtakip_selected_business_id'),
     ),
     [menu, setMenu] = useState(false),
     [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
@@ -128,6 +132,8 @@ export function App() {
 
         if (r.user.role === 'WAREHOUSE_STAFF') {
           setPage('goods-receipts');
+        } else if (r.user.role === 'OWNER') {
+          setPage('control-center');
         }
 
         await saveOfflineUser(
@@ -142,6 +148,8 @@ export function App() {
 
           if (cached.role === 'WAREHOUSE_STAFF') {
             setPage('goods-receipts');
+          } else if (cached.role === 'OWNER') {
+            setPage('control-center');
           }
         }
       } finally {
@@ -149,15 +157,19 @@ export function App() {
       }
     })();
   }, []);
-  if (loading) return <div className="loading">BEDSS yükleniyor…</div>;
+  if (loading) return <div className="loading">DepomTakip yükleniyor…</div>;
   const invite = new URLSearchParams(location.search).get('invite');
   if (invite) return <Onboarding token={invite} />;
   if (!user) return <Login onLogin={setUser} />;
-  const field = ['COUNTER', 'AUDITOR', 'GUEST'].includes(user.role);
+  const counter = user.role === 'COUNTER';
+  const field = ['AUDITOR', 'GUEST'].includes(user.role);
   const warehouseStaff = user.role === 'WAREHOUSE_STAFF';
   const userPermissions = Array.isArray(user.permissions) ? user.permissions : [];
   const can = (p: string) => userPermissions.includes(p);
   const warehouseStaffKeys = new Set([
+    'dashboard',
+    'locations',
+    'products',
     'goods-receipts',
     'put-away',
     'internal-transfer',
@@ -172,6 +184,7 @@ export function App() {
       return warehouseStaffKeys.has(key);
     }
 
+    if (key === 'control-center') return user.role === 'OWNER';
     if (key === 'system-demo') return user.role === 'SUPER_ADMIN';
 
     return key === 'product-import'
@@ -184,6 +197,7 @@ export function App() {
   });
 
   const dashboardItem = visible.find(([key]) => key === 'dashboard');
+  const controlCenterItem = visible.find(([key]) => key === 'control-center');
   const mobileDevicesItem = visible.find(([key]) => key === 'mobile-devices');
 
   const itemsForGroup = (keys: readonly string[]) =>
@@ -206,13 +220,15 @@ export function App() {
       }
     } finally {
       await clearOfflineUser();
-      localStorage.removeItem('bedss_selected_business_id');
+      localStorage.removeItem('depomtakip_selected_business_id');
       setSelectedBusinessId(null);
       setUser(null);
       setPage('dashboard');
     }
   };
+  if (counter) return <CounterShell user={user} logout={logout} />;
   if (field) return <MobileShell user={user} logout={logout} />;
+  if (warehouseStaff) return <WarehouseStaffShell user={user} logout={logout} />;
   return (
     <div className="app-shell">
       <aside className={menu ? 'sidebar expanded' : 'sidebar'}>
@@ -220,7 +236,7 @@ export function App() {
           <span className="brand-icon">
             <Boxes size={24} />
           </span>
-          BEDSS<span className="brand-dot">®</span>
+          <img src="/depomtakip-logo.png" alt="DepomTakip" className="brand-logo" />
         </a>
         <div className="workspace-tag">
           <span className="workspace-avatar">B</span>
@@ -261,6 +277,24 @@ export function App() {
                 >
                   <Icon size={19} />
                   {label}
+                </button>
+              );
+            })()}
+          {controlCenterItem &&
+            (() => {
+              const [key, label, Icon] = controlCenterItem;
+              return (
+                <button
+                  key={key}
+                  className={page === key ? 'nav-item selected control-center-nav' : 'nav-item control-center-nav'}
+                  onClick={() => {
+                    setPage(key);
+                    setMenu(false);
+                  }}
+                >
+                  <Icon size={19} />
+                  <span>{label}</span>
+                  <span className="nav-new">CANLI</span>
                 </button>
               );
             })()}
@@ -348,6 +382,8 @@ export function App() {
         <div className="page-content">
           {page === 'dashboard' ? (
             <Dashboard navigate={setPage} user={user} />
+          ) : page === 'control-center' ? (
+            <BayiControlCenter navigate={setPage} />
           ) : page === 'product-import' ? (
             <ProductImport user={user} />
           ) : page === 'initial-stock' ? (
@@ -380,14 +416,14 @@ export function App() {
               selectedBusinessId={selectedBusinessId}
               onSelectBusiness={(id) => {
                 setSelectedBusinessId(id);
-                localStorage.setItem('bedss_selected_business_id', id);
+                localStorage.setItem('depomtakip_selected_business_id', id);
               }}
             />
           )}
         </div>
         <footer>
-          BEDSS <span>Depo ve Sayım Yönetim Sistemi</span>
-          <span>İlk sürüm · 0.1.0</span>
+          DepomTakip <span>Depo ve Sayım Yönetim Sistemi</span>
+          <span>V2.4 · Bayi Operasyon Merkezi</span>
         </footer>
       </main>
     </div>
@@ -435,9 +471,9 @@ function DemoReset() {
       </div>
       <div className="card">
         <h3>Demo ortamını başlangıç durumuna getir</h3>
-        <p className="muted">Sayım, stok, hareket, atama ve diğer demo kayıtları temizlenir; BEDSS başlangıç demo verileri yeniden oluşturulur.</p>
+        <p className="muted">Sayım, stok, hareket, atama ve diğer demo kayıtları temizlenir; DepomTakip başlangıç demo verileri yeniden oluşturulur.</p>
         {status && !status.enabled && <div className="notice">Bu ortamda demo sıfırlama kapalı. Sunucuda <code>DEMO_RESET_ENABLED=true</code> tanımlayın.</div>}
-        {status && status.enabled && !status.safe_to_reset && <div className="error">Gerçek firma verisi algılandı. Güvenlik nedeniyle sıfırlama engellendi.</div>}
+        {status && status.enabled && !status.safe_to_reset && <div className="error">Gerçek bayi verisi algılandı. Güvenlik nedeniyle sıfırlama engellendi.</div>}
         {error && <div className="error">{error}</div>}
         {message && <div className="notice">{message}</div>}
         <label>Onay metni
@@ -461,11 +497,8 @@ function Login({ onLogin }: { onLogin: (u: Row) => void }) {
   return (
     <div className="login-page">
       <section className="login-story">
-        <div className="brand">
-          <span className="brand-icon">
-            <Boxes />
-          </span>
-          DepomTakip
+        <div className="brand login-logo-wrap">
+          <img src="/depomtakip-logo.png" alt="DepomTakip" className="login-brand-logo" />
         </div>
 
         <div>
@@ -520,7 +553,7 @@ function Login({ onLogin }: { onLogin: (u: Row) => void }) {
                 setError('');
               }}
             >
-              Yönetici
+              Merkez
             </button>
 
             <button
@@ -531,7 +564,7 @@ function Login({ onLogin }: { onLogin: (u: Row) => void }) {
                 setError('');
               }}
             >
-              Firma
+              Bayi Yetkilisi
             </button>
 
             <button
@@ -548,10 +581,10 @@ function Login({ onLogin }: { onLogin: (u: Row) => void }) {
 
           <p className="muted">
             {loginType === 'admin'
-              ? 'Sistem yöneticisi e-posta adresi ve şifresiyle giriş yapar.'
+              ? 'DepomTakip Merkez yöneticisi e-posta adresi ve şifresiyle giriş yapar.'
               : loginType === 'firm'
-                ? 'Firma kodu, 6 haneli kullanıcı numarası ve PIN girin.'
-                : 'Firma kodu, 6 haneli personel numarası ve PIN girin.'}
+                ? 'Bayi kodu, 6 haneli kullanıcı numarası ve PIN girin.'
+                : 'Bayi kodu, 6 haneli personel numarası ve PIN girin.'}
           </p>
 
           <form
@@ -609,7 +642,7 @@ function Login({ onLogin }: { onLogin: (u: Row) => void }) {
             ) : (
               <>
                 <label>
-                  Firma Kodu
+                  Bayi Kodu
                   <input
                     type="text"
                     name="business_code"
@@ -661,7 +694,7 @@ function Login({ onLogin }: { onLogin: (u: Row) => void }) {
                       placeholder="Yalnızca ilk girişte"
                     />
                     <small>
-                      Firma yetkilisinin yalnızca ilk girişinde gereklidir.
+                      Bayi yetkilisinin yalnızca ilk girişinde gereklidir.
                     </small>
                   </label>
                 )}
@@ -808,7 +841,7 @@ function Dashboard({ navigate, user }: { navigate: (p: string) => void; user: Ro
         <>
           <div className="stats-grid">
             {[
-              ['Toplam Depo', data.metrics.warehouses, Warehouse, 'İşletmelerinize bağlı depolar'],
+              ['Toplam Depo', data.metrics.warehouses, Warehouse, 'Bayilerinize bağlı depolar'],
               ['Ürün Çeşidi', data.metrics.products, Package, 'Kayıtlı benzersiz SKU'],
               [
                 'Aktif Sayım',
@@ -1019,7 +1052,7 @@ function Management({
   };
   const businessField: Field = {
     name: 'business_id',
-    label: 'İşletme',
+    label: 'Bayi',
     options: options('businesses'),
     value: user.business_id || selectedBusinessId || aux.businesses?.[0]?.id,
   };
@@ -1070,8 +1103,8 @@ function Management({
   let endpoint = '';
   if (modal === 'business') {
     fields = [
-      { name: 'name', label: 'Firma kısa adı' },
-      { name: 'code', label: 'Firma kodu' },
+      { name: 'name', label: 'Bayi kısa adı' },
+      { name: 'code', label: 'Bayi kodu' },
       { name: 'legal_name', label: 'Resmi / ticari unvan', required: false },
       { name: 'tax_number', label: 'Vergi / T.C. kimlik numarası' },
       { name: 'tax_office', label: 'Vergi dairesi', required: false },
@@ -1083,7 +1116,7 @@ function Management({
       { name: 'address', label: 'Açık adres', required: false },
       {
         name: 'status',
-        label: 'Firma durumu',
+        label: 'Bayi durumu',
         options: [
           { value: 'ACTIVE', label: 'Aktif' },
           { value: 'PASSIVE', label: 'Pasif' },
@@ -1237,6 +1270,24 @@ function Management({
     ];
     endpoint = 'stocks/' + selected?.id;
   }
+  if (modal === 'quick-personnel') {
+    fields = [
+      businessField,
+      { name: 'name', label: 'Ad soyad' },
+      { name: 'email', label: 'E-posta (opsiyonel)', type: 'email', required: false },
+      {
+        name: 'role',
+        label: 'Görev',
+        options: [
+          { value: 'WAREHOUSE_STAFF', label: 'Depo Görevlisi' },
+          { value: 'COUNTER', label: 'Sayım Görevlisi' },
+        ],
+      },
+      { name: 'login_code', label: '6 haneli personel numarası' },
+      { name: 'pin', label: '6 haneli PIN' },
+    ];
+    endpoint = 'personnel/quick-create';
+  }
   if (modal === 'invite') {
     fields = [
       businessField,
@@ -1262,7 +1313,7 @@ function Management({
           <p>
             {
               {
-                businesses: 'BEDSS sistemine bağlı firmaları ve kurumsal bilgilerini yönetin.',
+                businesses: 'DepomTakip sistemine bağlı bayileri ve kurumsal bilgilerini yönetin.',
                 locations: 'Depodan hücreye, her fiziksel konum kayıt altında.',
                 products: 'Ürün kartlarını, birimleri ve lokasyon stoklarını takip edin.',
                 users: 'Personel erişimlerini ve evrak onaylarını yönetin.',
@@ -1275,7 +1326,7 @@ function Management({
           {page === 'businesses' && user.role === 'SUPER_ADMIN' && (
             <button className="primary" onClick={() => setModal('business')}>
               <Plus size={18} />
-              Firma Ekle
+              Bayi Ekle
             </button>
           )}
           {page === 'locations' && can('depo_yonet') && (
@@ -1322,19 +1373,24 @@ function Management({
                     className="secondary"
                     type="button"
                     disabled
-                    title="Önce Firmalar ekranından çalışma firmasını seçmelisiniz."
+                    title="Önce Bayiler ekranından çalışma firmasını seçmelisiniz."
                   >
-                    Önce Firma Seçin
+                    Önce Bayi Seçin
                   </button>
                 )
               )}
             </>
           )}
           {page === 'users' && (
-            <button className="primary" onClick={() => setModal('invite')}>
-              <Plus size={18} />
-              Personel Davet Et
-            </button>
+            <>
+              <button className="secondary" onClick={() => setModal('invite')}>
+                Davet ile Personel
+              </button>
+              <button className="primary" onClick={() => setModal('quick-personnel')}>
+                <Plus size={18} />
+                Hızlı Personel Oluştur
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -1359,15 +1415,15 @@ function Management({
         <section className="bedss-firm-center">
           <div className="bedss-firm-center-head">
             <div>
-              <div className="eyebrow">BEDSS SUPER ADMIN</div>
-              <h2>Firma Yönetim Merkezi</h2>
+              <div className="eyebrow">DEPOMTAKİP MERKEZ</div>
+              <h2>Bayi Yönetim Merkezi</h2>
               <p className="muted">
-                BEDSS'e bağlı firmaları, depoları, personelleri ve ürün yapılarını tek merkezden yönetin.
+                DepomTakip’e bağlı bayileri, depoları, personelleri ve ürün yapılarını tek merkezden yönetin.
               </p>
             </div>
             <div className="bedss-firm-total">
               <strong>{rows.length}</strong>
-              <span>Kayıtlı Firma</span>
+              <span>Kayıtlı Bayi</span>
             </div>
           </div>
 
@@ -1391,7 +1447,7 @@ function Management({
 
                 <div className="bedss-firm-info">
                   <div>
-                    <small>Firma Kodu</small>
+                    <small>Bayi Kodu</small>
                     <strong>{firm.code || '—'}</strong>
                   </div>
                   <div>
@@ -1434,12 +1490,12 @@ function Management({
 
                 <div className="bedss-firm-footer">
                   <small>
-                    {firm.address || 'Firma adresi henüz tanımlanmamış.'}
+                    {firm.address || 'Bayi adresi henüz tanımlanmamış.'}
                   </small>
 
                   <div className="button-row">
                     {selectedBusinessId === firm.id ? (
-                      <span className="badge active">Seçili Firma</span>
+                      <span className="badge active">Seçili Bayi</span>
                     ) : (
                       <button
                         type="button"
@@ -1457,7 +1513,7 @@ function Management({
                         await load();
                       }}
                     />
-                    <strong>BEDSS</strong>
+                    <strong>DepomTakip</strong>
                   </div>
                 </div>
               </article>
@@ -1465,9 +1521,9 @@ function Management({
 
             {!filtered.length && (
               <div className="card">
-                <h3>Henüz firma bulunmuyor</h3>
+                <h3>Henüz bayi bulunmuyor</h3>
                 <p className="muted">
-                  Sağ üstteki Firma Ekle butonuyla ilk firma kaydını oluşturabilirsiniz.
+                  Sağ üstteki Bayi Ekle butonuyla ilk bayi kaydını oluşturabilirsiniz.
                 </p>
               </div>
             )}
@@ -1514,7 +1570,7 @@ function Management({
             <thead>
               <tr>
                 {(page === 'businesses'
-                  ? ['Firma adı', 'Vergi numarası', 'Durum', 'Oluşturulma', 'İşlem']
+                  ? ['Bayi adı', 'Vergi numarası', 'Durum', 'Oluşturulma', 'İşlem']
                   : page === 'locations'
                     ? ['Lokasyon', 'Tür', 'Depo', 'Üst lokasyon', 'Kod', '']
                     : page === 'products'
@@ -1538,7 +1594,7 @@ function Management({
                             'ABC',
                           ]
                       : page === 'users'
-                        ? ['Personel', 'Rol', 'İşletme', 'Durum', 'İşlemler']
+                        ? ['Personel', 'Rol', 'Bayi', 'Durum', 'İşlemler']
                         : ['Zaman', 'Kullanıcı', 'İşlem', 'Kayıt türü', 'Ayrıntı']
                 ).map((v, i) => (
                   <th key={i}>{v}</th>
@@ -1553,7 +1609,7 @@ function Management({
                       <td>
                         <strong>{r.name}</strong>
                         <small>
-                          Firma Kodu: <code>{r.code || '—'}</code>
+                          Bayi Kodu: <code>{r.code || '—'}</code>
                         </small>
                       </td>
 
@@ -1815,13 +1871,14 @@ function Management({
         <Modal
           title={
             {
-              business: 'Yeni Firma',
+              business: 'Yeni Bayi',
               warehouse: 'Yeni Depo',
               location: 'Yeni Lokasyon',
               product: 'Yeni Ürün Kartı',
               stock: 'Yeni Stok Kaydı',
               adjust: 'Stok Düzeltme',
               invite: 'Personel Daveti',
+              'quick-personnel': 'Hızlı Personel Oluştur',
             }[modal] || ''
           }
           close={() => setModal(null)}
@@ -1908,7 +1965,7 @@ function Management({
 
                 if (!productBusinessId) {
                   throw new Error(
-                    'Ürün eklemek için önce Firmalar ekranından bir firma seçmelisiniz.',
+                    'Ürün eklemek için önce Bayiler ekranından bir bayi seçmelisiniz.',
                   );
                 }
 
@@ -1916,9 +1973,13 @@ function Management({
               }
 
               if (modal === 'invite' && b.role === 'AUDITOR') b.business_id = null;
+              if (modal === 'quick-personnel') {
+                b.business_id = user.business_id || selectedBusinessId || b.business_id;
+                b.warehouse_ids = [];
+              }
               const r = await api('/' + endpoint, modal === 'adjust' ? 'PATCH' : 'POST', b);
               setModal(null);
-              if (modal === 'invite') setNotice(r);
+              if (modal === 'invite' || modal === 'quick-personnel') setNotice(r);
               await load();
             }}
           />
@@ -1983,7 +2044,7 @@ function Management({
                 </label>
               ))
             ) : (
-              <Empty text="Bu firma için atanabilir depo bulunamadı." />
+              <Empty text="Bu bayi için atanabilir depo bulunamadı." />
             )}
 
             <div className="button-row">
@@ -2024,7 +2085,7 @@ function Management({
       )}
       {notice && (
         <Modal
-          title={notice.image ? 'Lokasyon QR Kodu' : 'Demo Davet Bilgileri'}
+          title={notice.image ? 'Lokasyon QR Kodu' : notice.login ? 'Personel Giriş Bilgileri' : 'Demo Davet Bilgileri'}
           close={() => setNotice(null)}
         >
           {notice.image ? (
@@ -2032,6 +2093,20 @@ function Management({
               <img src={notice.image} alt="Lokasyon QR kodu" />
               <code>{notice.code}</code>
             </div>
+          ) : notice.login ? (
+            <>
+              <div className="alert">
+                {notice.message} Personel girişte bayi kodu + personel numarası + PIN kullanır; ayrıca lisans kodu girmez.
+              </div>
+              <label>
+                Personel numarası
+                <input readOnly value={notice.login.login_code} />
+              </label>
+              <label>
+                İlk PIN
+                <input readOnly value={notice.login.pin} />
+              </label>
+            </>
           ) : (
             <>
               <div className="alert">

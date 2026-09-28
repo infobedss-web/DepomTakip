@@ -169,7 +169,7 @@ export function mapSheet(data: SheetData, mapping: Record<string, string>) {
     const target = mapping[col.id];
     if (!target || target === 'custom') continue;
     if (!fields.some(([key]) => key === target))
-      errors.push({ row: 1, field: target, type: 'MAPPING', message: 'Geçersiz BEDSS alanı.' });
+      errors.push({ row: 1, field: target, type: 'MAPPING', message: 'Geçersiz DepomTakip alanı.' });
     if (used.has(target))
       errors.push({
         row: 1,

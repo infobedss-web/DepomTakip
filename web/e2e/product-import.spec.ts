@@ -10,8 +10,8 @@ test('Explicit business, safe mapping, stale-file reset, lost response and persi
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
-  await page.getByLabel('E-posta adresi').fill('admin@bedss.local');
-  await page.getByLabel('Şifre', { exact: true }).fill('BedssDemo!2026');
+  await page.getByLabel('E-posta adresi').fill('admin@depomtakip.local');
+  await page.getByLabel('Şifre', { exact: true }).fill('DepomTakip!2026');
   await page.getByRole('button', { name: 'Giriş Yap', exact: true }).click();
   await page
     .locator('nav')
@@ -96,8 +96,8 @@ test('Explicit business, safe mapping, stale-file reset, lost response and persi
 });
 test('Only the latest selected file can become importable', async ({ page }) => {
   await page.goto('/');
-  await page.getByLabel('E-posta adresi').fill('bayi@bedss.local');
-  await page.getByLabel('Şifre', { exact: true }).fill('BedssDemo!2026');
+  await page.getByLabel('E-posta adresi').fill('bayi@depomtakip.local');
+  await page.getByLabel('Şifre', { exact: true }).fill('DepomTakip!2026');
   await page.getByRole('button', { name: 'Giriş Yap', exact: true }).click();
   await page
     .locator('nav')
@@ -122,8 +122,8 @@ test('Resume button finishes a persisted partial job without repeating batch one
   page,
 }) => {
   await page.goto('/');
-  await page.getByLabel('E-posta adresi').fill('bayi@bedss.local');
-  await page.getByLabel('Şifre', { exact: true }).fill('BedssDemo!2026');
+  await page.getByLabel('E-posta adresi').fill('bayi@depomtakip.local');
+  await page.getByLabel('Şifre', { exact: true }).fill('DepomTakip!2026');
   await page.getByRole('button', { name: 'Giriş Yap', exact: true }).click();
   await expect(page.locator('nav')).toBeVisible();
   const business = (await (await page.request.get('/api/businesses')).json())[0],

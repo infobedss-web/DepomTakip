@@ -1,7 +1,7 @@
 {
-  "name": "bedss",
+  "name": "depomtakip",
   "private": true,
-  "version": "0.1.0",
+  "version": "2.6.0",
   "workspaces": [
     "backend",
     "web"
@@ -17,7 +17,11 @@
     "format": "prettier --write \"backend/src/**/*.ts\" \"backend/test/**/*.ts\" \"web/src/**/*.{ts,tsx,css}\" \"web/e2e/*.ts\" \"*.{json,ts,yml}\" \"**/tsconfig.json\"",
     "format:check": "prettier --check \"backend/src/**/*.ts\" \"backend/test/**/*.ts\" \"web/src/**/*.{ts,tsx,css}\"",
     "electron:dev": "electron .",
-    "electron:build": "npm run build && electron-builder --win nsis --x64"
+    "electron:build": "npm run build && electron-builder --win nsis --x64",
+    "preflight": "node scripts/preflight.mjs",
+    "verify:v2.5": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-v2.5.ps1",
+    "verify:production-env": "node scripts/verify-production-env.mjs",
+    "verify:v2.6": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-v2.6.ps1"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
@@ -28,9 +32,9 @@
   },
   "main": "electron/main.cjs",
   "build": {
-    "appId": "com.bedss.desktop",
-    "productName": "BEDSS",
-    "artifactName": "BEDSS Setup.${ext}",
+    "appId": "com.depomtakip.desktop",
+    "productName": "DepomTakip",
+    "artifactName": "DepomTakip-Setup.${ext}",
     "asar": true,
     "directories": {
       "output": "release"
@@ -42,23 +46,23 @@
     "extraResources": [
       {
         "from": "backend/dist",
-        "to": "bedss/api/dist"
+        "to": "depomtakip/api/dist"
       },
       {
         "from": "web/dist",
-        "to": "bedss/web/dist"
+        "to": "depomtakip/web/dist"
       },
       {
         "from": "database",
-        "to": "bedss/database"
+        "to": "depomtakip/database"
       },
       {
         "from": "electron-runtime/node_modules",
-        "to": "bedss/node_modules"
+        "to": "depomtakip/node_modules"
       },
       {
         "from": "electron-runtime/runtime",
-        "to": "bedss/runtime"
+        "to": "depomtakip/runtime"
       }
     ],
     "win": {
@@ -76,7 +80,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "BEDSS",
+      "shortcutName": "DepomTakip",
       "perMachine": false
     }
   },

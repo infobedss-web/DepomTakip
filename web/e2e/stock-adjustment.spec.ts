@@ -9,8 +9,8 @@ test('Stock adjustment page renders and APIs return arrays', async ({ page }) =>
 
   await page.goto('/');
 
-  await page.getByLabel('E-posta').fill('bayi@bedss.local');
-  await page.getByLabel('\u015eifre').fill('BedssDemo!2026');
+  await page.getByLabel('E-posta').fill('bayi@depomtakip.local');
+  await page.getByLabel('\u015eifre').fill('DepomTakip!2026');
 
   await page
     .getByRole('button', {

@@ -20,7 +20,7 @@ import {
   MAX_FILE_BYTES,
 } from '../../web/src/product-import-data.js';
 process.env.DATABASE_URL =
-  process.env.TEST_DATABASE_URL || 'postgresql://bedss:bedss_local@127.0.0.1:55432/bedss_test';
+  process.env.TEST_DATABASE_URL || 'postgresql://depomtakip:depomtakip_local@127.0.0.1:55432/depomtakip_test';
 assert.match(new URL(process.env.DATABASE_URL).pathname, /_test$/);
 const { app } = await import('../src/app.js');
 const { pool, migrate } = await import('../src/database.js');
@@ -31,7 +31,7 @@ const admin = request.agent(app),
   counter = request.agent(app);
 let business: string, foreign: string;
 const prefix = randomUUID().slice(0, 8),
-  password = 'BedssDemo!2026';
+  password = 'DepomTakip!2026';
 const digest = (s: string) => createHash('sha256').update(s).digest('hex');
 const row = (i: number, tag = prefix) => ({
   source_row: i + 2,

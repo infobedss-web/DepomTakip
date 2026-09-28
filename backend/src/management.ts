@@ -28,7 +28,7 @@ manage.post('/businesses', requirePermission('bayi_yonet'), async (req, res) => 
   assert(
     req.user.role === 'SUPER_ADMIN',
     403,
-    'Firma oluşturma yalnızca BEDSS sistem yöneticisine aittir.',
+    'Bayi oluşturma yalnızca DepomTakip Merkez yöneticisine aittir.',
   );
 
   const b = z
@@ -124,7 +124,7 @@ manage.get('/businesses/:id', async (req, res) => {
     )
   ).rows[0];
 
-  assert(row, 404, 'Firma bulunamadı.');
+  assert(row, 404, 'Bayi bulunamadı.');
   tenant(req.user, row.id);
 
   res.json(row);
@@ -137,7 +137,7 @@ manage.put(
     assert(
       req.user.role === 'SUPER_ADMIN',
       403,
-      'Firma ana bilgilerini yalnızca BEDSS sistem yöneticisi değiştirebilir.',
+      'Bayi ana bilgilerini yalnızca DepomTakip Merkez yöneticisi değiştirebilir.',
     );
 
     const b = z
@@ -169,7 +169,7 @@ manage.put(
         )
       ).rows[0];
 
-      assert(current, 404, 'Firma bulunamadı.');
+      assert(current, 404, 'Bayi bulunamadı.');
 
       const row = (
         await db.query(
@@ -411,7 +411,7 @@ manage.post('/warehouses', requirePermission('depo_yonet'), async (req, res) => 
     assert(
       license,
       403,
-      'Firma lisansı bulunamadı.',
+      'Bayi lisansı bulunamadı.',
     );
 
     assert(
@@ -774,6 +774,140 @@ manage.get('/audit-logs', requirePermission('log_izle'), async (req, res) =>
     ).rows,
   ),
 );
+manage.get('/bayi-control-center', requirePermission('rapor_izle'), async (req, res) => {
+  assert(
+    req.user.role === 'OWNER',
+    403,
+    'Operasyon Merkezi yalnızca Bayi Yetkilisi hesabında kullanılır.',
+  );
+
+  const businessId = req.user.business_id;
+  assert(businessId, 400, 'Bayi hesabı bulunamadı.');
+
+  const [personnel, devices, roomMetrics, liveRooms, pendingReviews, recentActivity] =
+    await Promise.all([
+      pool.query(
+        `
+          SELECT
+            count(*) FILTER (WHERE status='ACTIVE')::integer AS active_personnel,
+            count(*) FILTER (WHERE role='WAREHOUSE_STAFF' AND status='ACTIVE')::integer AS warehouse_staff,
+            count(*) FILTER (WHERE role='COUNTER' AND status='ACTIVE')::integer AS counters
+          FROM users
+          WHERE business_id=$1
+        `,
+        [businessId],
+      ),
+      pool.query(
+        `
+          SELECT
+            count(*) FILTER (WHERE status='ACTIVE')::integer AS total_devices,
+            count(*) FILTER (
+              WHERE status='ACTIVE'
+                AND last_seen_at >= now() - interval '2 minutes'
+            )::integer AS online_devices,
+            count(*) FILTER (
+              WHERE status='ACTIVE'
+                AND (last_seen_at IS NULL OR last_seen_at < now() - interval '2 minutes')
+            )::integer AS offline_devices
+          FROM mobile_devices
+          WHERE business_id=$1
+        `,
+        [businessId],
+      ),
+      pool.query(
+        `
+          SELECT
+            count(*) FILTER (WHERE status='OPEN')::integer AS open_rooms,
+            count(*) FILTER (WHERE status='COMPLETED')::integer AS waiting_review,
+            count(*) FILTER (WHERE status='APPROVED')::integer AS approved_rooms
+          FROM rooms
+          WHERE business_id=$1
+        `,
+        [businessId],
+      ),
+      pool.query(
+        `
+          SELECT
+            r.id,
+            r.name,
+            r.status,
+            r.count_type,
+            r.blind_round,
+            w.name AS warehouse_name,
+            count(DISTINCT ri.stock_id)::integer AS total_items,
+            count(DISTINCT ce.stock_id)::integer AS counted_items,
+            count(DISTINCT a.user_id)::integer AS assigned_personnel,
+            count(DISTINCT a.user_id) FILTER (WHERE a.joined_at IS NOT NULL)::integer AS joined_personnel
+          FROM rooms r
+          JOIN warehouses w ON w.id=r.warehouse_id
+          LEFT JOIN room_items ri ON ri.room_id=r.id
+          LEFT JOIN count_entries ce ON ce.room_id=r.id AND ce.stock_id=ri.stock_id
+          LEFT JOIN assignments a ON a.room_id=r.id
+          WHERE r.business_id=$1
+            AND r.status IN ('DRAFT','OPEN','COMPLETED')
+          GROUP BY r.id,w.name
+          ORDER BY
+            CASE r.status WHEN 'OPEN' THEN 0 WHEN 'COMPLETED' THEN 1 ELSE 2 END,
+            r.created_at DESC
+          LIMIT 8
+        `,
+        [businessId],
+      ),
+      pool.query(
+        `
+          SELECT
+            r.id,
+            r.name,
+            w.name AS warehouse_name,
+            count(ce.id) FILTER (WHERE ce.base_quantity <> ri.expected)::integer AS variance_items,
+            COALESCE(sum(abs(ce.base_quantity-ri.expected)),0) AS absolute_difference,
+            EXISTS(
+              SELECT 1 FROM rooms r2
+              WHERE r2.parent_room_id=r.id AND r2.blind_round=2
+            ) AS has_second_count
+          FROM rooms r
+          JOIN warehouses w ON w.id=r.warehouse_id
+          JOIN room_items ri ON ri.room_id=r.id
+          LEFT JOIN count_entries ce ON ce.room_id=r.id AND ce.stock_id=ri.stock_id
+          WHERE r.business_id=$1
+            AND r.status='COMPLETED'
+            AND COALESCE(r.blind_round,1)=1
+          GROUP BY r.id,w.name
+          ORDER BY r.created_at DESC
+          LIMIT 8
+        `,
+        [businessId],
+      ),
+      pool.query(
+        `
+          SELECT
+            a.id,
+            a.action,
+            a.entity_type,
+            a.created_at,
+            u.name AS actor_name
+          FROM audit_logs a
+          LEFT JOIN users u ON u.id=a.actor_id
+          WHERE a.business_id=$1
+          ORDER BY a.id DESC
+          LIMIT 10
+        `,
+        [businessId],
+      ),
+    ]);
+
+  res.json({
+    metrics: {
+      ...personnel.rows[0],
+      ...devices.rows[0],
+      ...roomMetrics.rows[0],
+    },
+    live_rooms: liveRooms.rows,
+    pending_reviews: pendingReviews.rows,
+    recent_activity: recentActivity.rows,
+  });
+});
+
 manage.get('/dashboard', requirePermission('rapor_izle'), async (req, res) => {
   const args = [req.user.role === 'SUPER_ADMIN', req.user.business_id];
   const [metrics, recent, low] = await Promise.all([
@@ -802,7 +936,7 @@ manage.get('/dashboard', requirePermission('rapor_izle'), async (req, res) => {
 // Demo ortamını güvenli biçimde başlangıç durumuna döndürür.
 // Gerçek müşteri verisi bulunan bir veritabanında işlem bilinçli olarak engellenir.
 manage.get('/system/demo-reset/status', async (req, res) => {
-  assert(req.user.role === 'SUPER_ADMIN', 403, 'Bu işlem yalnızca BEDSS sistem yöneticisine aittir.');
+  assert(req.user.role === 'SUPER_ADMIN', 403, 'Bu işlem yalnızca DepomTakip Merkez yöneticisine aittir.');
   const businesses = (await pool.query('SELECT name,tax_number FROM businesses ORDER BY name')).rows;
   const demoTaxNumbers = new Set(['1234567890', '9876543210']);
   const nonDemo = businesses.filter((row) => !demoTaxNumbers.has(String(row.tax_number)));
@@ -815,7 +949,7 @@ manage.get('/system/demo-reset/status', async (req, res) => {
 });
 
 manage.post('/system/demo-reset', async (req, res) => {
-  assert(req.user.role === 'SUPER_ADMIN', 403, 'Bu işlem yalnızca BEDSS sistem yöneticisine aittir.');
+  assert(req.user.role === 'SUPER_ADMIN', 403, 'Bu işlem yalnızca DepomTakip Merkez yöneticisine aittir.');
   assert(process.env.DEMO_RESET_ENABLED === 'true', 403, 'Demo sıfırlama bu ortamda kapalı.');
 
   const body = z.object({ confirmation: z.literal('DEMO VERİLERİNİ SIFIRLA') }).parse(req.body);
@@ -828,7 +962,7 @@ manage.post('/system/demo-reset', async (req, res) => {
   assert(
     nonDemo.length === 0,
     409,
-    `Gerçek firma verisi bulunduğu için demo sıfırlama engellendi: ${nonDemo.map((r) => r.name).join(', ')}`,
+    `Gerçek bayi verisi bulunduğu için demo sıfırlama engellendi: ${nonDemo.map((r) => r.name).join(', ')}`,
   );
 
   await transaction(async (db) => {
@@ -852,7 +986,7 @@ manage.post('/system/demo-reset', async (req, res) => {
     `INSERT INTO audit_logs(business_id,actor_id,action,entity_type,entity_id,details)
      SELECT b.id,u.id,'DEMO_RESET','system',b.id::text,$1::jsonb
      FROM businesses b
-     JOIN users u ON u.email='admin@bedss.local'
+     JOIN users u ON u.email='admin@depomtakip.local'
      WHERE b.tax_number='1234567890'`,
     [JSON.stringify({ reset_at: new Date().toISOString() })],
   );

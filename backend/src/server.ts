@@ -1,4 +1,4 @@
-﻿import { app } from './app.js';
+import { app } from './app.js';
 import { migrate, pool } from './database.js';
 import { ensureBootstrapAdmin } from './bootstrap-admin.js';
 
@@ -10,7 +10,7 @@ async function start() {
   await ensureBootstrapAdmin();
 
   const server = app.listen(port, host, () =>
-    console.log(`BEDSS API http://${host}:${port}`),
+    console.log(`DepomTakip API http://${host}:${port}`),
   );
 
   for (const signal of ['SIGINT', 'SIGTERM']) {
@@ -23,7 +23,7 @@ async function start() {
 }
 
 start().catch(async (error) => {
-  console.error('[BEDSS STARTUP ERROR]', error);
+  console.error('[DEPOMTAKIP STARTUP ERROR]', error);
 
   try {
     await pool.end();

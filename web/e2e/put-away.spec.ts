@@ -32,7 +32,7 @@ test(
         'E-posta adresi',
       )
       .fill(
-        'bayi@bedss.local',
+        'bayi@depomtakip.local',
       );
 
 
@@ -44,7 +44,7 @@ test(
         },
       )
       .fill(
-        'BedssDemo!2026',
+        'DepomTakip!2026',
       );
 
 

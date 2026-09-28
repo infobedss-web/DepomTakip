@@ -85,7 +85,7 @@ export function can(u: User, p: string) {
 }
 export async function authenticate(req: Request, _res: Response, next: NextFunction) {
   try {
-    const sid = req.cookies?.bedss_session;
+    const sid = req.cookies?.depomtakip_session;
     assert(sid, 401, 'Oturum açmanız gerekiyor.');
     const r = await pool.query(
       'SELECT u.id,u.business_id,u.name,u.email,u.role,u.status,u.permissions,u.denied_permissions FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.status=$2',
@@ -111,7 +111,7 @@ export function tenant(u: User, businessId: string | null) {
   assert(
     u.role === 'SUPER_ADMIN' || (!!businessId && u.business_id === businessId),
     403,
-    'Bu işletmeye erişiminiz bulunmuyor.',
+    'Bu bayiye erişiminiz bulunmuyor.',
   );
 }
 export function management(u: User) {
